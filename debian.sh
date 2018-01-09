@@ -8,7 +8,7 @@
 #  6. apt-get install git
 #  7. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
 #  8. chmod 755 installer.sh
-#  9. In Virtualbox manager window, choose 'Devices->Insert Guest Additions CD image'
+#  9. In Virtualbox manager, choose 'Devices->Insert Guest Additions CD image'
 # 10. mount /dev/sr0 /mnt
 # 11. cp /mnt/VBoxLinuxAdditions.run ~
 # 12. umount /mnt
@@ -156,6 +156,19 @@ case $DESKTOP in
   mate) install_desktop_mate;;
 esac
 
+case $CHN_IM in
+  ibus) #install the Chinese input method: IBus
+    $INSTALL ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
+  fcitx) #install the Chinese input method: Fcitx
+    $INSTALL fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
+esac
+
+if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
+  $INSTALL fonts-arphic-ukai fonts-arphic-uming
+  $INSTALL fonts-arphic-gkai00mp fonts-arphic-bkai00mp
+  $INSTALL fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
+fi
+  
 #install vim
 install_vim
 
@@ -171,19 +184,6 @@ $INSTALL arj meld ghex
 #install the browsers
 $INSTALL firefox-esr chromium
 
-case $CHN_IM in
-  ibus) #install the Chinese input method: IBus
-    $INSTALL ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
-  fcitx) #install the Chinese input method: Fcitx
-    $INSTALL fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
-esac
-
-if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
-  $INSTALL fonts-arphic-ukai fonts-arphic-uming
-  $INSTALL fonts-arphic-gkai00mp fonts-arphic-bkai00mp
-  $INSTALL fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
-fi
-  
 #install image viewers and editors
 $INSTALL geeqie gimp imagemagick
 $INSTALL inkscape
