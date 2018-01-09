@@ -16,6 +16,7 @@
 #
 # Using the installer script:
 #  1. Boot the Virtualbox Image and login as root
+#  2. Insert Guest Additions CD image if wish to match the version.
 #  2. run ./installer.sh to retrieve the laster version of the 'debian.sh'
 #  3. Edit the 'Configure' section, and/or add/remove the packages you want.
 #  4. run 'debian.sh'
