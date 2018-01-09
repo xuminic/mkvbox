@@ -119,6 +119,12 @@ install_virtualbox_guest_addition()
   $INSTALL linux-headers-$(uname -r)
 
   if test "x$CHROOT" = x; then
+      # best match the virtualbox guest addition
+      mount /dev/sr0 /mnt
+      if test "x$?" = "x0"; then
+        cp -f /mnt/VBoxLinuxAdditions.run /root
+      fi
+      umount /mnt
       /root/VBoxLinuxAdditions.run
   fi
 }
