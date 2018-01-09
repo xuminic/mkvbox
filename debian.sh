@@ -1,17 +1,32 @@
 #!/bin/sh
-#  1. Install with base utitlies
-#  2. apt-get install build-essential module-assistant
-#  3. m-a prepare
-#  4. install virtualbox guest addition by 'VBoxLinuxAdditions.run'
-#  5. copy VBoxLinuxAdditions.run to /root/GuestAddition-4
-#  6. copy this file to /root
+# Create the Virtualbox Image with the minimum installation of Debian:
+#  1. Hostname is default 'debian' and Domain name is empty
+#  2. Create a user account, for example, 'andy'. See DEFUSER below.
+#  3. Only install the 'standard system utitlies'
+#  4. Boot the Virtualbox Image and login as root
+#  5. apt-get install git
+#  6. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
+#  7. chmod 755 installer.sh
+#  8. In Virtualbox manager window, choose 'Devices->Insert Guest Additions CD image'
+#  9. mount /dev/sr0 /mnt
+# 10. cp /mnt/VBoxLinuxAdditions.run ~
+# 11. umount /mnt
+# 12. Shutdown the Virtualbox Image and you may ZIP it for future using.
+#
+# Using the installer script:
+#  1. Boot the Virtualbox Image and login as root
+#  2. run ./installer.sh to retrieve the laster version of the 'debian.sh'
+#  3. Edit the 'Configure' section, and/or add/remove the packages you want.
+#  4. run 'debian.sh'
 #
 # History:
+#  20180108: commit into the github for easy accessing.
+#
 
 #############################################################################
 # Configure
 #############################################################################
-ADDUSER=andy
+DEFUSER=andy
 CHN_IM=ibus             # fcitx/ibus
 DESKTOP=lxde            # lxde/mate
 
@@ -23,10 +38,10 @@ CHROOT=
 
 if test "x$CHROOT" = x; then
   INSTALL="apt-get -y install"
-  SUDO="sudo -u $ADDUSER"
+  SUDO="sudo -u $DEFUSER"
 else            # debug mode
   INSTALL="apt-get -s -y install"
-  SUDO="echo sudo -u $ADDUSER"
+  SUDO="echo sudo -u $DEFUSER"
 fi
 
 #############################################################################
@@ -90,16 +105,29 @@ set nobackup
 set mouse=
 VIMRC
 
-  if test ! -d $CHROOT/home/$ADDUSER; then
-    mkdir -p $CHROOT/home/$ADDUSER
+  if test ! -d $CHROOT/home/$DEFUSER; then
+    mkdir -p $CHROOT/home/$DEFUSER
   fi
-  $SUDO cp -f $CHROOT/etc/skel/.vimrc $CHROOT/home/$ADDUSER
+  $SUDO cp -f $CHROOT/etc/skel/.vimrc $CHROOT/home/$DEFUSER
+}
+
+install_virtualbox_guest_addition()
+{
+  #install GNU GCC Compiler, kernel module and Development Environment
+  $INSTALL build-essential module-assistant manpages-dev
+
+  if test "x$CHROOT" = x; then
+    m-a prepare
+    if test -e /root/VBoxLinuxAdditions.run; then
+      /root/VBoxLinuxAdditions.run
+    fi
+  fi
 }
 
 init_git_reference()
 {
-  if test -d $CHROOT/home/$ADDUSER; then
-    cd $CHROOT/home/$ADDUSER
+  if test -d $CHROOT/home/$DEFUSER; then
+    cd $CHROOT/home/$DEFUSER
   fi
   $SUDO git config --global user.name "Andy Xuming"
   $SUDO git config --global user.email "xuming@users.sf.net"
@@ -116,7 +144,7 @@ init_git_reference()
 if test "x$CHROOT" = x; then
   apt-get -y update
   apt-get -y upgrade
-  usermod -a -G sudo,vboxsf $ADDUSER
+  usermod -a -G sudo,vboxsf $DEFUSER
 else
   apt-get -s -y update
   apt-get -s -y upgrade
@@ -129,12 +157,11 @@ case $DESKTOP in
   mate) install_desktop_mate;;
 esac
 
-#install GNU GCC Compiler and Development Environment
-$INSTALL build-essential manpages-dev
+#install vim
 install_vim
 
-#install the git
-$INSTALL git qgit
+#install the GUI of git
+$INSTALL qgit
 
 #install ffmpeg and libgd
 $INSTALL libavformat-dev libgd2-dev libx11-dev zlib1g-dev
@@ -212,13 +239,13 @@ if test ! -d $CHROOT$HOME/bin; then
   mkdir -p $CHROOT$HOME/bin
 fi
 
-if test ! -d $CHROOT/home/$ADDUSER/bin; then
-  $SUDO mkdir -p $CHROOT/home/$ADDUSER/bin
+if test ! -d $CHROOT/home/$DEFUSER/bin; then
+  $SUDO mkdir -p $CHROOT/home/$DEFUSER/bin
 fi
-if test ! -d $CHROOT/home/$ADDUSER; then
-  $SUDO mkdir -p $CHROOT/home/$ADDUSER
+if test ! -d $CHROOT/home/$DEFUSER; then
+  $SUDO mkdir -p $CHROOT/home/$DEFUSER
 fi
-$SUDO cp -f $CHROOT/etc/skel/.bashrc $CHROOT/home/$ADDUSER
+$SUDO cp -f $CHROOT/etc/skel/.bashrc $CHROOT/home/$DEFUSER
 
 
 #############################################################################
@@ -227,12 +254,6 @@ $SUDO cp -f $CHROOT/etc/skel/.bashrc $CHROOT/home/$ADDUSER
 echo Initial Git references
 init_git_reference
 
-echo ReInstall Virtualbox Guest Addition
-if test "x$CHROOT" = x; then
-  cd ~
-  cd GuestAddition-*
-  if test -e ./VBoxLinuxAdditions.run; then
-    ./VBoxLinuxAdditions.run
-  fi
-fi
+echo Install Virtualbox Guest Addition
+install_virtualbox_guest_addition
 
