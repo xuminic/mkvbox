@@ -2,16 +2,17 @@
 # Create the Virtualbox Image with the minimum installation of Debian:
 #  1. Hostname is default 'debian' and Domain name is empty
 #  2. Create a user account, for example, 'andy'. See DEFUSER below.
-#  3. Only install the 'standard system utitlies'
-#  4. Boot the Virtualbox Image and login as root
-#  5. apt-get install git
-#  6. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
-#  7. chmod 755 installer.sh
-#  8. In Virtualbox manager window, choose 'Devices->Insert Guest Additions CD image'
-#  9. mount /dev/sr0 /mnt
-# 10. cp /mnt/VBoxLinuxAdditions.run ~
-# 11. umount /mnt
-# 12. Shutdown the Virtualbox Image and you may ZIP it for future using.
+#  3. Partition the HDD to one partition only without SWAP volumn.
+#  4. Only install the 'standard system utitlies'
+#  5. Boot the Virtualbox Image and login as root
+#  6. apt-get install git
+#  7. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
+#  8. chmod 755 installer.sh
+#  9. In Virtualbox manager window, choose 'Devices->Insert Guest Additions CD image'
+# 10. mount /dev/sr0 /mnt
+# 11. cp /mnt/VBoxLinuxAdditions.run ~
+# 12. umount /mnt
+# 13. Shutdown the Virtualbox Image and you may ZIP it for future using.
 #
 # Using the installer script:
 #  1. Boot the Virtualbox Image and login as root
@@ -114,13 +115,11 @@ VIMRC
 install_virtualbox_guest_addition()
 {
   #install GNU GCC Compiler, kernel module and Development Environment
-  $INSTALL build-essential module-assistant manpages-dev
+  $INSTALL build-essential manpages-dev
+  $INSTALL linux-headers-$(uname -r)
 
   if test "x$CHROOT" = x; then
-    m-a prepare
-    if test -e /root/VBoxLinuxAdditions.run; then
       /root/VBoxLinuxAdditions.run
-    fi
   fi
 }
 
