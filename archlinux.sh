@@ -273,6 +273,26 @@ pip install tensorflow
 
 
 #############################################################################
+# Install the Guest Addition so the vboxsf group will be available
+#############################################################################
+echo Install Virtualbox Guest Addition
+if test "x$CHROOT" = x; then
+  installer linux-headers
+  # best match the virtualbox guest addition
+  mount /dev/sr0 /mnt
+  if test "x$?" = "x0"; then
+    cp -f /mnt/VBoxLinuxAdditions.run /root
+  fi
+  umount /mnt
+  /root/VBoxLinuxAdditions.run
+
+  # create the mount point of shared folder
+  mkdir /media
+  mkdir /media/sf_Shared
+  echo "Shared /media/sf_Shared vboxsf uid=0,gid=109,rw,dmode=755,fmode=644 0 0" >> /etc/fstab
+fi
+
+#############################################################################
 # Setup the useful scripts
 #############################################################################
 # setting the bash
@@ -339,21 +359,4 @@ timedatectl set-ntp true
 
 echo Enable the coredump in sysctl
 sysctl -w kernel.core_pattern="core"
-
-echo ReInstall Virtualbox Guest Addition
-if test "x$CHROOT" = x; then
-  installer linux-headers
-  # best match the virtualbox guest addition
-  mount /dev/sr0 /mnt
-  if test "x$?" = "x0"; then
-    cp -f /mnt/VBoxLinuxAdditions.run /root
-  fi
-  umount /mnt
-  /root/VBoxLinuxAdditions.run
-
-  # create the mount point of shared folder
-  mkdir /media
-  mkdir /media/sf_Shared
-  echo "Shared /media/sf_Shared vboxsf uid=0,gid=109,rw,dmode=755,fmode=644 0 0" >> /etc/fstab
-fi
 
