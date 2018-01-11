@@ -30,13 +30,22 @@
 # 21. grub-mkconfig -o /boot/grub/grub.cfg
 #
 # 22. pacman -S sudo
-# 23. visudo   --> "%wheel    ALL=(ALL) ALL"
+# 23. "vi /etc/sudoer" or visudo   --> "%wheel    ALL=(ALL) ALL"
 #
-# 24. pacman -S virtualbox-guest-modules-arch virtualbox-guest-utils
-# 25. mkdir /media; mkdir /media/sf_Shared
-# 26. echo "Shared /media/sf_Shared vboxsf rw,dmode=755,fmode=644 0 0" >> /etc/fstab
+# 24. pacman -S git
+# 25. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
+# 26. chmod 755 installer.sh
+#
+# 27. In Virtualbox manager, Insert Guest Additions 5.1.x than lower version
+# 29. mount /dev/sr0 /mnt
+# 30. cp /mnt/VBoxLinuxAdditions.run ~
+# 31. umount /mnt
+# 32. Shutdown the Virtualbox Image and you may ZIP it for future using.
 #
 # History:
+#  20180111:
+#    removed virtualbox-guest-modules-arch virtualbox-guest-utils because it's
+#    no better that the orale release.
 #  20170605: the first workable script in Archlinux
 
 #############################################################################
@@ -225,13 +234,12 @@ installer base-devel
 installer meld 
 installer gdb
 
-#install the git
-installer git
+#install the git GUI
 installer qgit
-installer openssh
 
 #install the Internet tools
 installer wget
+installer openssh
 
 #install Libre Office
 installer libreoffice-fresh
@@ -309,11 +317,6 @@ if [ -z "\$DISPLAY" ] && [ -n "\$XDG_VTNR" ] && [ "\$XDG_VTNR" -eq 1 ]; then
 fi
 AUTOX11
 
-echo Fix the fstab so shared fold could be writable
-sed '$d' /etc/fstab > fstab.tmp
-echo "Shared /media/sf_Shared vboxsf uid=0,gid=109,rw,dmode=755,fmode=644 0 0" >> fstab.tmp
-mv fstab.tmp /etc/fstab
-
 #############################################################################
 # The last part would be adding the default user
 #############################################################################
@@ -339,10 +342,18 @@ sysctl -w kernel.core_pattern="core"
 
 echo ReInstall Virtualbox Guest Addition
 if test "x$CHROOT" = x; then
-  cd ~
-  cd GuestAddition-*
-  if test -e ./VBoxLinuxAdditions.run; then
-    ./VBoxLinuxAdditions.run
+  installer linux-headers
+  # best match the virtualbox guest addition
+  mount /dev/sr0 /mnt
+  if test "x$?" = "x0"; then
+    cp -f /mnt/VBoxLinuxAdditions.run /root
   fi
+  umount /mnt
+  /root/VBoxLinuxAdditions.run
+
+  # create the mount point of shared folder
+  mkdir /media
+  mkdir /media/sf_Shared
+  echo "Shared /media/sf_Shared vboxsf uid=0,gid=109,rw,dmode=755,fmode=644 0 0" >> /etc/fstab
 fi
 
