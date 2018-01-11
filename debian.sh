@@ -9,7 +9,7 @@
 #  7. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
 #  8. chmod 755 installer.sh
 #  9. In Virtualbox manager, choose 'Devices->Insert Guest Additions CD image'
-# 9a. Debian 9 seems requiring Guest Additions over 5.1.x so 5.2.4 has been tested.
+# 9a. Debian 9 requires Guest Additions over 5.1.x so 5.2.4 has been tested.
 # 10. mount /dev/sr0 /mnt
 # 11. cp /mnt/VBoxLinuxAdditions.run ~
 # 12. umount /mnt
@@ -119,11 +119,8 @@ install_virtualbox_guest_addition()
   #install GNU GCC Compiler, kernel module and Development Environment
   $INSTALL build-essential manpages-dev
   $INSTALL linux-headers-$(uname -r)
-  # Debian 9/64 still need module assistant with the guest addition 5.1.x
-  $INSTALL module-assistant
 
   if test "x$CHROOT" = x; then
-      m-a prepare
       # best match the virtualbox guest addition
       mount /dev/sr0 /mnt
       if test "x$?" = "x0"; then
@@ -179,7 +176,10 @@ if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
   $INSTALL fonts-arphic-gkai00mp fonts-arphic-bkai00mp
   $INSTALL fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
 fi
-  
+
+#install aptitude
+$INSTALL aptitude
+
 #install vim
 install_vim
 
@@ -193,10 +193,12 @@ $INSTALL libavformat-dev libgd2-dev libx11-dev zlib1g-dev
 $INSTALL arj meld ghex
 
 #install the browsers
-$INSTALL firefox-esr chromium
+$INSTALL firefox-esr 
+$INSTALL chromium
 
 #install image viewers and editors
-$INSTALL geeqie gimp imagemagick
+$INSTALL geeqie imagemagick
+$INSTALL gimp
 $INSTALL inkscape
 
 #install libre-office
