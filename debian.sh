@@ -186,8 +186,11 @@ install_vim
 #install the GUI of git
 $INSTALL qgit
 
+#install the autoconfig tools
+$INSTALL autoconf
+
 #install ffmpeg and libgd
-$INSTALL libavformat-dev libgd2-dev libx11-dev zlib1g-dev
+$INSTALL libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
 
 #install other tools
 $INSTALL arj meld ghex
