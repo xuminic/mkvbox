@@ -65,24 +65,24 @@ CHROOT=
 installer()
 {
   echo INSTALLING $*
+  echo pacman -S --noconfirm --needed $*
   if test "x$CHROOT" = x; then
     pacman -S --noconfirm --needed $*
-  else
-    echo pacman -S --noconfirm --needed $*
   fi
   if test "x$?" = "x1"; then
+    echo Install failed!
     exit 1
   fi
 }
 
 add_users()
 {
+  echo useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1"
   if test "x$CHROOT" = x; then
     useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1"
     echo "$1":"$2" | chpasswd
     sudo -u "$1" mkdir "/home/$1/bin"
   else		# debug mode
-    echo useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1"
     echo "$1":"$2" 
     echo sudo -u "$1" mkdir "/home/$1/bin"
   fi

@@ -40,26 +40,39 @@ CHROOT=
 #CHROOT=./tmp
 
 if test "x$CHROOT" = x; then
-  INSTALL="apt-get -y install"
   SUDO="sudo -u $DEFUSER"
 else            # debug mode
-  INSTALL="apt-get -s -y install"
   SUDO="echo sudo -u $DEFUSER"
 fi
+
+installer()
+{
+  echo INSTALLING $*
+  if test "x$CHROOT" = x; then
+    apt-get -y install $*
+  else
+    apt-get -s -y install $*
+  fi
+  if ! test "x$?" = "x0"; then
+    echo Install failed!
+    exit 1
+  fi
+}
+
 
 #############################################################################
 # Install packages
 #############################################################################
 install_X11_server()
 {
-  $INSTALL xinit
-  $INSTALL fonts-wqy-microhei fonts-wqy-zenhei
-  #$INSTALL xorg-fonts-100dpi xorg-fonts-75dpi
+  installer xinit
+  installer fonts-wqy-microhei fonts-wqy-zenhei
+  #installer xorg-fonts-100dpi xorg-fonts-75dpi
 }
 
 install_desktop_lxde()
 {
-  $INSTALL lxde leafpad xarchiver
+  installer lxde leafpad xarchiver
 
   if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
     if test -e $CHROOT/usr/bin/leafpad; then
@@ -79,7 +92,7 @@ LEAFPAD
 
 install_desktop_mate()
 {
-  $INSTALL mate-desktop-environment-extras lightdm
+  installer mate-desktop-environment-extras lightdm
 
   if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
     gsettings set org.mate.pluma auto-detected-encodings \
@@ -90,7 +103,7 @@ install_desktop_mate()
 
 install_vim()
 {
-  $INSTALL vim vim-gtk
+  installer vim vim-gtk
 
   if test -e $CHROOT/usr/bin/vi; then
     rm $CHROOT/usr/bin/vi
@@ -117,8 +130,8 @@ VIMRC
 install_virtualbox_guest_addition()
 {
   #install GNU GCC Compiler, kernel module and Development Environment
-  $INSTALL build-essential manpages-dev
-  $INSTALL linux-headers-$(uname -r)
+  installer build-essential manpages-dev
+  installer linux-headers-$(uname -r)
 
   if test "x$CHROOT" = x; then
       # best match the virtualbox guest addition
@@ -166,58 +179,58 @@ esac
 
 case $CHN_IM in
   ibus) #install the Chinese input method: IBus
-    $INSTALL ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
+    installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
   fcitx) #install the Chinese input method: Fcitx
-    $INSTALL fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
+    installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
 esac
 
 if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
-  $INSTALL fonts-arphic-ukai fonts-arphic-uming
-  $INSTALL fonts-arphic-gkai00mp fonts-arphic-bkai00mp
-  $INSTALL fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
+  installer fonts-arphic-ukai fonts-arphic-uming
+  installer fonts-arphic-gkai00mp fonts-arphic-bkai00mp
+  installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
 fi
 
 #install aptitude
-$INSTALL aptitude
+installer aptitude
 
 #install vim
 install_vim
 
 #install the GUI of git
-$INSTALL qgit
+installer qgit
 
 #install the autoconfig tools
-$INSTALL autoconf
+installer autoconf
 
 #install ffmpeg and libgd
-$INSTALL libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
+installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
 
 #install other tools
-$INSTALL arj meld ghex
+installer arj meld ghex
 
 #install the browsers
-$INSTALL firefox-esr 
-$INSTALL chromium
+installer firefox-esr 
+installer chromium
 
 #install image viewers and editors
-$INSTALL geeqie imagemagick
-$INSTALL gimp
-$INSTALL inkscape
+installer geeqie imagemagick
+installer gimp
+installer inkscape
 
 #install libre-office
-$INSTALL libreoffice 
+installer libreoffice 
 
 #install CADs
-$INSTALL librecad
-$INSTALL freecad
-$INSTALL openscad
-$INSTALL blender
+installer librecad
+installer freecad
+installer openscad
+installer blender
 
 #install python related. In default the python2 and python3 were all installed.
 # matplotlib requires python-dev
-$INSTALL python-pip python-dev python-virtualenv python3-virtualenv
+installer python-pip python-dev python-virtualenv python3-virtualenv
 # install machine learn kit
-$INSTALL python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
+installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
 
 #############################################################################
 # Setup the useful scripts
