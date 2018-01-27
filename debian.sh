@@ -193,6 +193,9 @@ fi
 #install aptitude
 installer aptitude
 
+#install CIFS to support samba file system
+installer cifs-utils
+
 #install vim
 install_vim
 
