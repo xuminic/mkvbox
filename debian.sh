@@ -210,6 +210,7 @@ installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
 
 #install other tools
 installer arj meld ghex
+installer qbittorrent
 
 #install the browsers
 installer firefox-esr 
@@ -255,7 +256,7 @@ alias grep='grep --color=auto'
 alias l.='ls -d .* --color=auto'
 alias ls='ls --color=auto'
 alias ll='ls -l --color=auto'
-alias path='echo \$PATH'
+alias path='echo $PATH'
 alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
 BASHRC
 
