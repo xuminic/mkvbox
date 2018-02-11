@@ -204,6 +204,10 @@ installer qgit
 
 #install the autoconfig tools
 installer autoconf
+installer libtool
+
+#install s-record for firmware binary process
+installer srecord
 
 #install ffmpeg and libgd
 installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
