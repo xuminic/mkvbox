@@ -156,6 +156,7 @@ install_vim()
 cat >  $CHROOT/etc/skel/.vimrc << VIMRC
 runtime! vimrc_example.vim
 set nobackup
+set noundofile
 set mouse=
 VIMRC
 }

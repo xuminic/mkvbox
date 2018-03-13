@@ -118,6 +118,7 @@ install_vim()
   cat >  $CHROOT/etc/skel/.vimrc << VIMRC
 runtime! vimrc_example.vim
 set nobackup
+set noundofile
 set mouse=
 VIMRC
 
@@ -159,12 +160,10 @@ init_git_reference()
   #$SUDO git remote add sf ssh://xuming@git.code.sf.net/p/ezthumb/code
 }
 
-
 #update and upgrade to the newest releases
 if test "x$CHROOT" = x; then
   apt-get -y update
   apt-get -y upgrade
-  usermod -a -G sudo,vboxsf $DEFUSER
 else
   apt-get -s -y update
   apt-get -s -y upgrade
@@ -192,6 +191,9 @@ fi
 
 #install aptitude
 installer aptitude
+
+#install ifconfig
+installer net-tools
 
 #install vim
 install_vim
@@ -285,3 +287,6 @@ init_git_reference
 echo Install Virtualbox Guest Addition
 install_virtualbox_guest_addition
 
+if test "x$CHROOT" = x; then
+  usermod -a -G sudo,vboxsf $DEFUSER
+fi
