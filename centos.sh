@@ -25,49 +25,49 @@ CHROOT=
 
 installer()
 {
-  echo INSTALLING $*
+  echo INSTALLING $* | tee -a install.log
   if test "x$CHROOT" = x; then
-    yum -y install $*
+    yum -y install $* | tee -a install.log
   else
-    echo yum -y install $*
+    echo yum -y install $* | tee -a install.log
   fi
   if ! test "x$?" = "x0"; then
-    echo Install failed!
+    echo Install failed! | tee -a install.log
     exit 1
   fi
 }
 
 group_plant()
 {
-  echo INSTALLING $*
+  echo INSTALLING "$@" | tee -a install.log
   if test "x$CHROOT" = x; then
-    yum -y groupinstall $*
+    yum -y groupinstall "$@" | tee -a install.log
   else
-    echo yum -y groupinstall $*
+    echo yum -y groupinstall "$@" | tee -a install.log
   fi
   if ! test "x$?" = "x0"; then
-    echo Install failed!
+    echo Install failed! | tee -a install.log
     exit 1
   fi
 }
 
 local_plant()
 {
-  echo INSTALLING $*
+  echo INSTALLING "$@" | tee -a install.log
   if test "x$CHROOT" = x; then
-    rpm -Uvh $*
+    rpm -Uvh "$@" | tee -a install.log
   else
-    echo rpm -Uvh $*
+    echo rpm -Uvh "$@" | tee -a install.log
   fi
 }
 
 rpm_signature()
 {
-  echo IMPORT Signature $*
+  echo IMPORT Signature "$@" | tee -a install.log
   if test "x$CHROOT" = x; then
-    rpm --import $*
+    rpm --import "$@" | tee -a install.log
   else
-    echo rpm --import $*
+    echo rpm --import "$@" | tee -a install.log
   fi
 }
 
@@ -76,6 +76,9 @@ rpm_signature()
 #############################################################################
 install_desktop_mate()
 {
+  #weird break by "MATE Desktop" installation
+  installer libwebkit2gtk
+
   group_plant "MATE Desktop"
   installer caja-share
 
@@ -139,6 +142,9 @@ install_firefox_latest()
 }
 
 
+#create a log file
+touch install.log
+
 #install extra repos
 installer epel-release
 
@@ -156,22 +162,22 @@ local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release
 #install google repos
 cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLREPO
 [google]
-name=Google - $basearch
-baseurl=http://dl.google.com/linux/rpm/stable/$basearch
+name=Google - \$basearch
+baseurl=http://dl.google.com/linux/rpm/stable/\$basearch
 enabled=1
 gpgcheck=1
 gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
 
 [google-chrome]
 name=google-chrome
-baseurl=http://dl.google.com/linux/chrome/rpm/stable/$basearch
+baseurl=http://dl.google.com/linux/chrome/rpm/stable/\$basearch
 enabled=1
 gpgcheck=1
 gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
 
 [google-earth]
 name=google-earth
-baseurl=http://dl.google.com/linux/earth/rpm/stable/$basearch
+baseurl=http://dl.google.com/linux/earth/rpm/stable/\$basearch
 enabled=1
 gpgcheck=1
 gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
@@ -181,7 +187,7 @@ GGLREPO
 
 #update and upgrade to the newest releases
 if test "x$CHROOT" = x; then
-  yum -y update
+  yum -y update | tee -a install.log
 fi
 
 #install ifconfig
@@ -232,9 +238,7 @@ install_vim
 #install the GUI of git
 installer qgit
 
-#install the autoconfig tools
-#installer autoconf
-#installer libtool
+#install the C/C++ tool chains
 group_plant "Development Tools"
 
 #install s-record for firmware binary process
