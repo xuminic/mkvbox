@@ -107,7 +107,7 @@ install_desktop_gnome()
 
 install_vim()
 {
-  installer vim vim-gtk
+  installer vim
 
   if test -e $CHROOT/usr/bin/vi; then
     rm $CHROOT/usr/bin/vi
@@ -202,6 +202,8 @@ installer cifs-utils
 #install system enhancement tool
 installer arj
 
+#install vim
+install_vim
 
 #install the X11 desktop environment
 group_plant "X Window system"
@@ -215,7 +217,7 @@ esac
 #systemctl get-default
 systemctl set-default graphical.target
 #systemctl get-default
-#systemctl isolate graphical.target
+systemctl isolate graphical.target
 
 
 
@@ -232,8 +234,8 @@ if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
 fi
 
 
-#install vim
-install_vim
+#install vim gui
+installer vim-gtk
 
 #install the GUI of git
 installer qgit
