@@ -76,9 +76,10 @@ rpm_signature()
 #############################################################################
 install_desktop_mate()
 {
-  #Weird break in "MATE Desktop" by EPEL
-  #some one removed libwebkitgtk so it broken the atril
-  #currently the atril can be recovered from the test repo
+  # Weird break in "MATE Desktop" by EPEL
+  # some one removed libwebkitgtk so it broken the atril
+  # currently the atril can be recovered from the test repo
+  # https://bugzilla.redhat.com/show_bug.cgi?id=1589486
   installer --enablerepo=epel-testing  atril atril-caja
 
   group_plant "MATE Desktop"
@@ -150,16 +151,8 @@ touch install.log
 #install extra repos
 installer epel-release
 
-#install ELRepo
-rpm_signature https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
-local_plant http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
-
 #install Nux Dextop
 local_plant http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
-
-#install RPM Fusion
-local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
-local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
 #install google repos
 cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLREPO
@@ -280,6 +273,19 @@ installer librecad
 #installer python-pip python-dev python-virtualenv python3-virtualenv
 # install machine learn kit
 #installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
+
+
+#############################################################################
+# Setup Extra repos
+# ELRepo breaks X Window system so it must be postponed
+#############################################################################
+#install ELRepo
+#rpm_signature https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+#local_plant http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+
+#install RPM Fusion
+#local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
+#local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
 #############################################################################
 # Setup the useful scripts
