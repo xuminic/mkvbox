@@ -76,8 +76,10 @@ rpm_signature()
 #############################################################################
 install_desktop_mate()
 {
-  #weird break by "MATE Desktop" installation
-  installer libwebkit2gtk
+  #Weird break in "MATE Desktop" by EPEL
+  #some one removed libwebkitgtk so it broken the atril
+  #currently the atril can be recovered from the test repo
+  installer --enablerepo=epel-testing  atril atril-caja
 
   group_plant "MATE Desktop"
   installer caja-share
@@ -217,7 +219,7 @@ esac
 #systemctl get-default
 systemctl set-default graphical.target
 #systemctl get-default
-systemctl isolate graphical.target
+#systemctl isolate graphical.target
 
 
 
