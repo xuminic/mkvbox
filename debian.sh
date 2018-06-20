@@ -29,7 +29,6 @@
 #############################################################################
 # Configure
 #############################################################################
-DEFUSER=andy
 CHN_IM=ibus             # fcitx/ibus
 DESKTOP=lxde            # lxde/mate
 
@@ -39,22 +38,16 @@ DESKTOP=lxde            # lxde/mate
 CHROOT=
 #CHROOT=./tmp
 
-if test "x$CHROOT" = x; then
-  SUDO="sudo -u $DEFUSER"
-else            # debug mode
-  SUDO="echo sudo -u $DEFUSER"
-fi
-
 installer()
 {
-  echo INSTALLING $*
+  echo INSTALLING $* | tee -a install.log
   if test "x$CHROOT" = x; then
-    apt-get -y install $*
+    apt-get -y install $* | tee -a install.log
   else
-    apt-get -s -y install $*
+    apt-get -s -y install $* | tee -a install.log
   fi
   if ! test "x$?" = "x0"; then
-    echo Install failed!
+    echo Install failed! | tee -a install.log
     exit 1
   fi
 }
@@ -106,9 +99,11 @@ install_vim()
   installer vim vim-gtk
 
   if test -e $CHROOT/usr/bin/vi; then
+    echo rm $CHROOT/usr/bin/vi | tee -a install.log
     rm $CHROOT/usr/bin/vi
   fi
   if test -e $CHROOT/etc/alternatives/vim; then
+    echo ln -s $CHROOT/etc/alternatives/vim $CHROOT/usr/bin/vi | tee -a install.log
     ln -s $CHROOT/etc/alternatives/vim $CHROOT/usr/bin/vi
   fi
   
@@ -121,11 +116,6 @@ set nobackup
 set noundofile
 set mouse=
 VIMRC
-
-  if test ! -d $CHROOT/home/$DEFUSER; then
-    mkdir -p $CHROOT/home/$DEFUSER
-  fi
-  $SUDO cp -f $CHROOT/etc/skel/.vimrc $CHROOT/home/$DEFUSER
 }
 
 install_virtualbox_guest_addition()
@@ -138,35 +128,31 @@ install_virtualbox_guest_addition()
       # best match the virtualbox guest addition
       mount /dev/sr0 /mnt
       if test "x$?" = "x0"; then
+        echo cp -f /mnt/VBoxLinuxAdditions.run /root | tee -a install.log
         cp -f /mnt/VBoxLinuxAdditions.run /root
       fi
       umount /mnt
-      /root/VBoxLinuxAdditions.run
+      /root/VBoxLinuxAdditions.run | tee -a install.log
+
+      local DEFUSER=`echo /home`
+      echo usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+      usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
   fi
 }
 
-init_git_reference()
-{
-  if test -d $CHROOT/home/$DEFUSER; then
-    cd $CHROOT/home/$DEFUSER
-  fi
-  $SUDO git config --global user.name "Andy Xuming"
-  $SUDO git config --global user.email "xuming@users.sf.net"
-  $SUDO git config --global core.editor vim
-  $SUDO git config --global merge.tool vimdiff
-  $SUDO git config --global credential.helper cache
-  
-  #$SUDO git remote set-url origin https://github.com/xuminic/ezthumb.git
-  #$SUDO git remote add sf ssh://xuming@git.code.sf.net/p/ezthumb/code
-}
+#############################################################################
+# Install starting
+#############################################################################
+#create a log file
+touch install.log
 
 #update and upgrade to the newest releases
 if test "x$CHROOT" = x; then
-  apt-get -y update
-  apt-get -y upgrade
+  apt-get -y update | tee -a install.log
+  apt-get -y upgrade | tee -a install.log
 else
-  apt-get -s -y update
-  apt-get -s -y upgrade
+  apt-get -s -y update | tee -a install.log
+  apt-get -s -y upgrade | tee -a install.log
 fi
 
 #install the X11 desktop environment
@@ -246,11 +232,11 @@ installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
 # Setup the useful scripts
 #############################################################################
 # setting the bash
-echo Updating the .bashrc file.
-if test ! -d $CHROOT$HOME; then
-  mkdir -p $CHROOT$HOME
+echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a install.log
+if test ! -d $CHROOT/etc/skel; then
+  mkdir -p $CHROOT/etc/skel
 fi
-cat >> $CHROOT$HOME/.bashrc << BASHRC
+cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
 
@@ -262,39 +248,19 @@ alias grep='grep --color=auto'
 alias l.='ls -d .* --color=auto'
 alias ls='ls --color=auto'
 alias ll='ls -l --color=auto'
-alias path='echo $PATH'
+alias path='echo \$PATH'
 alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
+
+ulimit -c unlimited
+
+PATH=\$PATH:\$HOME/bin:.
+
 BASHRC
-
-if test ! -d $CHROOT/etc/skel; then
-  mkdir -p $CHROOT/etc/skel
-fi
-cp $CHROOT$HOME/.bashrc $CHROOT/etc/skel
-echo "PATH=\$PATH:\$HOME/bin:." >> $CHROOT/etc/skel/.bashrc
-echo "PATH=\$PATH:\$HOME/bin" >> $CHROOT$HOME/.bashrc
-
-if test ! -d $CHROOT$HOME/bin; then
-  mkdir -p $CHROOT$HOME/bin
-fi
-
-if test ! -d $CHROOT/home/$DEFUSER/bin; then
-  $SUDO mkdir -p $CHROOT/home/$DEFUSER/bin
-fi
-if test ! -d $CHROOT/home/$DEFUSER; then
-  $SUDO mkdir -p $CHROOT/home/$DEFUSER
-fi
-$SUDO cp -f $CHROOT/etc/skel/.bashrc $CHROOT/home/$DEFUSER
 
 
 #############################################################################
 # The last part would be adding the default user
 #############################################################################
-echo Initial Git references
-init_git_reference
-
 echo Install Virtualbox Guest Addition
 install_virtualbox_guest_addition
 
-if test "x$CHROOT" = x; then
-  usermod -a -G sudo,vboxsf $DEFUSER
-fi

@@ -84,12 +84,6 @@ install_desktop_mate()
 
   group_plant "MATE Desktop"
   installer caja-share
-
-  if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
-    gsettings set org.mate.pluma auto-detected-encodings \
-      "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-    gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
-  fi
 }
 
 install_desktop_xfce()
@@ -113,9 +107,11 @@ install_vim()
   installer vim
 
   if test -e $CHROOT/usr/bin/vi; then
+    echo "Removed the default 'vi'" | tee -a install.log
     rm $CHROOT/usr/bin/vi
   fi
   if test -e $CHROOT/usr/bin/vim; then
+    echo "Linked the vi to 'vim'" | tee -a install.log
     ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
   fi
   
@@ -133,18 +129,22 @@ VIMRC
 install_firefox_latest()
 {
   if test "x$CHROOT" = x; then
-    wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"
-    tar xfj firefox-*.tar.bz2 -C /opt
+    wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US" | tee -a install.log
+    tar xfj firefox-*.tar.bz2 -C /opt | tee -a install.log
     rm -f firefox-*.tar.bz2
+    echo "Old Firefox will be renamed to /usr/bin/firefox-52" | tee -a install.log
     mv -f /usr/bin/firefox /usr/bin/firefox-52
+    echo ln -s /opt/firefox/firefox /usr/bin/firefox | tee -a install.log
     ln -s /opt/firefox/firefox /usr/bin/firefox
   else
-    echo wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"
-    echo tar xfj firefox-*.tar.bz2 -C /opt
+    echo wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US" | tee -a install.log
+    echo tar xfj firefox-*.tar.bz2 -C /opt | tee -a install.log
   fi
 }
 
-
+#############################################################################
+# Install starting
+#############################################################################
 #create a log file
 touch install.log
 
@@ -153,6 +153,10 @@ installer epel-release
 
 #install Nux Dextop
 local_plant http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
+
+#install RPM Fusion
+local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
+local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
 #install google repos
 cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLREPO
@@ -209,11 +213,8 @@ case $DESKTOP in
   cinnamon) install_desktop_cinnamon ;;
   gnome|*) install_desktop_gnome ;;
 esac
-#systemctl get-default
-systemctl set-default graphical.target
-#systemctl get-default
+systemctl set-default graphical.target | tee -a install.log
 #systemctl isolate graphical.target
-
 
 
 case $CHN_IM in
@@ -283,15 +284,11 @@ installer librecad
 #rpm_signature https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 #local_plant http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
 
-#install RPM Fusion
-#local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
-#local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
-
 #############################################################################
 # Setup the useful scripts
 #############################################################################
 # setting the bash
-echo Updating the .bashrc file.
+echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a install.log
 if test ! -d $CHROOT/etc/skel; then
   mkdir -p $CHROOT/etc/skel
 fi
@@ -309,6 +306,8 @@ alias ls='ls --color=auto'
 alias ll='ls -l --color=auto'
 alias path='echo \$PATH'
 alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
+
+ulimit -c unlimited
 
 PATH="\$PATH:\$HOME/bin:." 
 

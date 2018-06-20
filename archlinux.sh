@@ -51,8 +51,8 @@
 #############################################################################
 # Configure
 #############################################################################
-ADDUSER=andy
-ADDPWD=xuming
+ADDUSER=
+ADDPWD=
 CHN_IM=ibus		# fcitx/ibus
 DESKTOP=lxde		# lxde/mate
 
@@ -64,27 +64,27 @@ CHROOT=
 
 installer()
 {
-  echo INSTALLING $*
-  echo pacman -S --noconfirm --needed $*
+  echo INSTALLING $* | tee -a install.log
+  echo pacman -S --noconfirm --needed $* | tee -a install.log
   if test "x$CHROOT" = x; then
-    pacman -S --noconfirm --needed $*
+    pacman -S --noconfirm --needed $* | tee -a install.log
   fi
   if test "x$?" = "x1"; then
-    echo Install failed!
+    echo Install failed! | tee -a install.log
     exit 1
   fi
 }
 
 add_users()
 {
-  echo useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1"
+  echo useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1" | tee -a install.log
   if test "x$CHROOT" = x; then
-    useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1"
+    useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1" | tee -a install.log
     echo "$1":"$2" | chpasswd
     sudo -u "$1" mkdir "/home/$1/bin"
   else		# debug mode
-    echo "$1":"$2" 
-    echo sudo -u "$1" mkdir "/home/$1/bin"
+    echo "$1":"$2"  | tee -a install.log
+    echo sudo -u "$1" mkdir "/home/$1/bin" | tee -a install.log
   fi
 }
 
@@ -132,21 +132,17 @@ install_desktop_mate()
     mkdir -p $CHROOT/etc/skel
   fi
   echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
-  
-  if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
-    gsettings set org.mate.pluma auto-detected-encodings \
-	    "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-    gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
-  fi
 }
 
 install_vim()
 {
   installer vim gvim vim-spell-en
   if test -e $CHROOT/usr/bin/vi; then
+    echo Removed the default vi | tee -a install.log
     rm $CHROOT/usr/bin/vi
   fi
   if test -e $CHROOT/usr/bin/vim; then
+    echo Linked vi to vim | tee -a install.log
     ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
   fi
 
@@ -161,39 +157,41 @@ set mouse=
 VIMRC
 }
 
-init_git_reference()
+install_guest_addition()
 {
+  echo Install Virtualbox Guest Addition | tee -a install.log
   if test "x$CHROOT" = x; then
-    SETGIT="sudo -u $1 git"
-  else
-    SETGIT="echo sudo -u $1 git"	# debug mode
+    installer linux-headers
+    # best match the virtualbox guest addition
+    mount /dev/sr0 /mnt
+    if test "x$?" = "x0"; then
+      echo cp -f /mnt/VBoxLinuxAdditions.run /root  | tee -a install.log
+      cp -f /mnt/VBoxLinuxAdditions.run /root
+    fi
+    umount /mnt
+    /root/VBoxLinuxAdditions.run | tee -a install.log
+
+    # create the mount point of shared folder
+    echo mkdir /media/sf_Shared  | tee -a install.log
+    mkdir /media
+    mkdir /media/sf_Shared
+    echo Added \"Shared /media/sf_Shared vboxsf ...\" to /etc/fstab | tee -a install.log
+    echo "Shared /media/sf_Shared vboxsf uid=0,gid=109,rw,dmode=755,fmode=644 0 0" >> /etc/fstab
+
+    local DEFUSER=`echo /home`
+    echo usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+    usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
   fi
-
-  if test -d $CHROOT/home/$1; then
-    cd $CHROOT/home/$1
-  fi
-  $SETGIT config --global user.name "Andy Xuming"
-  $SETGIT config --global user.email "xuming@users.sf.net"
-  $SETGIT config --global core.editor vim
-  $SETGIT config --global merge.tool vimdiff
-  $SETGIT config --global credential.helper cache
-
-  #$SETGIT remote set-url origin https://github.com/xuminic/ezthumb.git
-  #$SETGIT remote add sf ssh://xuming@git.code.sf.net/p/ezthumb/code
-
-  # My projects
-  #git clone ssh://xuming@git.code.sf.net/p/ezthumb/code ezthumb
-  #git clone ssh://xuming@git.code.sf.net/p/ipblocklist/code ipblocklist
-  #git clone ssh://xuming@git.code.sf.net/p/libcsoup/code libcsoup
-  #git clone ssh://xuming@git.code.sf.net/p/mkmap/code mkmap
-  #git clone ssh://xuming@git.code.sf.net/p/rename/code rename
-  #git clone ssh://xuming@git.code.sf.net/p/snippetax/code snippetax
 }
+
 
 
 #############################################################################
 # Install starting
 #############################################################################
+#create a log file
+touch install.log
+
 #update and upgrade to the newest releases
 installer -yu
 installer -c
@@ -272,36 +270,15 @@ installer python-scipy python2-scipy python-scikit-learn python2-scikit-learn
 installer python-matplotlib python2-matplotlib
 pip install tensorflow
 
-
-#############################################################################
-# Install the Guest Addition so the vboxsf group will be available
-#############################################################################
-echo Install Virtualbox Guest Addition
-if test "x$CHROOT" = x; then
-  installer linux-headers
-  # best match the virtualbox guest addition
-  mount /dev/sr0 /mnt
-  if test "x$?" = "x0"; then
-    cp -f /mnt/VBoxLinuxAdditions.run /root
-  fi
-  umount /mnt
-  /root/VBoxLinuxAdditions.run
-
-  # create the mount point of shared folder
-  mkdir /media
-  mkdir /media/sf_Shared
-  echo "Shared /media/sf_Shared vboxsf uid=0,gid=109,rw,dmode=755,fmode=644 0 0" >> /etc/fstab
-fi
-
 #############################################################################
 # Setup the useful scripts
 #############################################################################
 # setting the bash
-echo Updating the .bashrc file.
-if test ! -d $CHROOT$HOME; then
-  mkdir -p $CHROOT$HOME
+echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a install.log
+if test ! -d $CHROOT/etc/skel; then
+  mkdir -p $CHROOT/etc/skel
 fi
-cat > $CHROOT$HOME/.bashrc << BASHRC
+cat > $CHROOT/etc/skel/.bashrc << BASHRC
 #
 # ~/.bashrc
 #
@@ -321,43 +298,42 @@ alias path='echo \$PATH'
 alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
 
 ulimit -c unlimited
+
+PATH="\$PATH:\$HOME/bin:." 
+
 BASHRC
 
-if test ! -d $CHROOT/etc/skel; then
-  mkdir -p $CHROOT/etc/skel
-fi
-cp $CHROOT$HOME/.bashrc $CHROOT/etc/skel
-echo "PATH=\$PATH:\$HOME/bin:." >> $CHROOT/etc/skel/.bashrc
-echo "PATH=\$PATH:\$HOME/bin" >> $CHROOT$HOME/.bashrc
-
 #auto start X desktop as the default user so no xDM needed
-echo Auto-start the X desktop
+echo Auto-start the X desktop | tee -a install.log
 cat > $CHROOT/etc/skel/.bash_profile << AUTOX11
 if [ -z "\$DISPLAY" ] && [ -n "\$XDG_VTNR" ] && [ "\$XDG_VTNR" -eq 1 ]; then
 	exec startx
 fi
 AUTOX11
 
+# set up time and date
+echo Initial Network Time Control | tee -a install.log
+timedatectl set-ntp true 
+
+echo Enable the coredump in sysctl | tee -a install.log
+sysctl -w kernel.core_pattern="core"
+
 #############################################################################
 # The last part would be adding the default user
 #############################################################################
-echo Adding the defualt user [$ADDUSER].
-add_users $ADDUSER $ADDPWD
+if test "x$ADDUSER" != "x"; then
+  echo Adding the defualt user [$ADDUSER].
+  add_users $ADDUSER $ADDPWD
 
-echo Autologin the first console as the default user [$ADDUSER].
-mkdir -p "$CHROOT/etc/systemd/system/getty@tty1.service.d"
-cat > "$CHROOT/etc/systemd/system/getty@tty1.service.d/autologin.conf" << AUTOLOGIN
+  echo Autologin the first console as the default user [$ADDUSER].
+  mkdir -p "$CHROOT/etc/systemd/system/getty@tty1.service.d"
+  cat > "$CHROOT/etc/systemd/system/getty@tty1.service.d/autologin.conf" << AUTOLOGIN
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin $ADDUSER --noclear %I \$TERM
 AUTOLOGIN
+fi
 
-echo Initial Git references
-init_git_reference $ADDUSER
-
-echo Initial Network Time Control
-timedatectl set-ntp true 
-
-echo Enable the coredump in sysctl
-sysctl -w kernel.core_pattern="core"
+# Install the Guest Addition so the vboxsf group will be available
+install_guest_addition
 
