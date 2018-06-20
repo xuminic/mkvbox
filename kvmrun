@@ -1,0 +1,190 @@
+#!/bin/bash
+#
+# Known issues:
+# qemu-system-x86_64 doesn't support l2-cache-size so cluster_size set to 256K
+# qemu-system-x86_64 doesn't support smp to q35 machine type
+# q35 machine type can not be used in installation process
+
+# debug only
+#RUN=echo
+
+# Command line parameters
+VMISO=
+VMBOX=
+VMHDA=16G
+VMFMTA=qcow2
+VMCLSA="-o cluster_size=256K"
+VMHDB=
+VMFMTB=raw
+VMRAM=2G
+
+# KVM Machine configurations
+#VMMONITOR="-monitor stdio"
+VMMONITOR="-monitor vc"
+#VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
+VMVIDEO="-vga qxl"
+#VMIOMMU="-machine q35,accel=kvm -cpu host,kvm=off"
+VMIOMMU="-machine pc,accel=kvm -cpu host -smp 2"
+VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
+VMFLAGS="-enable-kvm $VMMONITOR $VMVIDEO -m $VMRAM $VMIOMMU $VMRNG"
+
+
+usage_exit()
+{
+    cat << my_usage
+$0 [OPTION] KVM_IMAGE_NAME
+OPTION:
+  -i, --install=IMAGE        The installer ISO image
+  -a, --hda=SIZE             Define the size of hard disk A [16G]
+  -b, --hdb=SIZE             Define the size of hard disk B [none]
+  -r, --ram=RAM              Define the size of RAM [2G]
+      --iommu                List the IOMMU Group
+
+KVM_IMAGE_NAME is the base name of the KVM virtual machine.
+The correspondent image is KVM_IMAGE_NAME_hda.kvm.
+
+my_usage
+    exit 0
+}
+
+list_iommu()
+{
+    shopt -s nullglob
+    for d in /sys/kernel/iommu_groups/*/devices/*; do
+        n=${d#*/iommu_groups/*}; n=${n%%/*}
+        printf 'IOMMU Group %s ' "$n"
+        lspci -nns "${d##*/}"
+    done
+}
+
+# FIXME: qemu-system-x86_64 doesn't support l2-cache-size
+# qemu-system-x86_64: -drive file=vdisk_hda.kvm,l2-cache-size=2M: 
+#   could not open disk image vdisk_hda.kvm: Block format 'qcow2' used by 
+#   device 'ide0-hd0' doesn't support the option 'l2-cache-size'
+# FIXME: qemu-system-x86_64 doesn't support cache=none in an empty qcow2 image.
+# qemu-system-x86_64: -drive file=kkk_hda.kvm,if=none,id=qcow2,aio=native,cache=none: \
+#   could not open disk image kkk_hda.kvm: Could not read L1 table: Invalid argument
+# Note: Generally, do not use aio=native option along with cache=none for QEMU. 
+#   https://access.redhat.com/articles/41313
+# 
+# qemu [...] -drive if=none,id=drive0,format=raw -device virtio-blk-pci,drive=drive0,scsi=off ...
+add_drive()
+{
+    local TYPE=$(qemu-img info $1 | grep 'file format:' | cut -d' ' -f3)
+    #local SIZE=$(qemu-img info $1 | grep 'virtual size:' | cut -d'(' -f2 | cut -d' ' -f1)
+    local SIZE=0
+    local OPT_CACHE=""
+    #ocal OPT_AIO=",aio=native,cache=none"
+
+    case "$TYPE" in
+        qcow2)
+            if [ $SIZE -ge 68719476736 ]; then
+                OPT_CACHE=",l2-cache-size=8M"
+            elif [ $SIZE -ge 34359738368 ]; then
+                OPT_CACHE=",l2-cache-size=4M"
+            elif [ $SIZE -ge 17179869184 ]; then
+                OPT_CACHE=",l2-cache-size=2M"
+            fi;;
+    esac
+    #echo "-drive file=${1}${OPT_CACHE},if=virtio"
+    echo "-device virtio-blk-pci,drive=${TYPE},scsi=off -drive file=${1}${OPT_CACHE},if=none,id=${TYPE}${OPT_AIO}"
+} 
+
+
+# FIXME: random may not be a good idea. Fix the MAC to specified VM looks better
+#    printf "52:54:%02x:%02x:%02x:%02x" $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff )) \
+#        $(( $RANDOM & 0xff)) $(( $RANDOM & 0xff ))
+# FIXME: -device virtio-net-pci performance better than -net nic,model=virtio
+#     echo "-net nic,model=virtio,macaddr=${macaddr}"
+#     https://www.linux-kvm.org/page/10G_NIC_performance:_VFIO_vs_virtio
+# FIXME: could not configure /dev/net/tun (tap0): Operation not permitted
+#     -netdev tap,id=net0,ifname=tap0,script=/etc/qemu-kvm/qemu-ifup \
+#             -device virtio-net-pci,netdev=net0,mac=${macaddr}"
+add_nic()
+{
+
+    local nhash=$(echo $1|md5sum)
+    local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
+    echo "-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
+}
+
+
+# Install the vmachine
+# Two parameters: $1 is the ISO image; $2 is the vmachine name
+vm_install()
+{
+    if [ ! -e $1 ]; then
+        echo ISO Image [$1] not found
+        return
+    fi
+
+    if [ ! -e ${2}_hda.kvm ]; then
+        $RUN qemu-img create -f $VMFMTA $VMCLSA ${2}_hda.kvm $VMHDA
+    fi
+    local FSTDRV=$(add_drive ${2}_hda.kvm)
+
+    if [ -e ${2}_hdb.kvm ]; then
+        local SECDRV=$(add_drive ${2}_hdb.kvm)
+    elif [ "$VMHDB" != "" ]; then
+        $RUN qemu-img create -f $VMFMTB ${2}_hdb.kvm $VMHDB
+        local SECDRV=$(add_drive ${2}_hdb.kvm)
+    fi
+
+    $RUN qemu-system-x86_64 -cdrom "$1" -name "$2" -boot order=d \
+        $VMFLAGS $(add_nic ${2}) $FSTDRV $SECDRV
+}
+
+# Run the vmachine
+# One parameter: $1 is the vmachine name
+vm_run()
+{
+    if [ -e ${1}_hda.kvm ]; then
+        local FSTDRV=$(add_drive ${1}_hda.kvm)
+    else
+        echo KVM Image [$1] not found
+        return
+    fi
+    if [ -e ${1}_hdb.kvm ]; then
+        local SECDRV=$(add_drive ${1}_hdb.kvm)
+    fi
+    echo qemu-system-x86_64 -name $1 $VMFLAGS $(add_nic ${1}) $FSTDRV $SECDRV
+    $RUN qemu-system-x86_64 -name $1 $VMFLAGS $(add_nic ${1}) $FSTDRV $SECDRV
+}
+
+
+while [ "$#" -gt 0 ]; do 
+    case "$1" in
+        -h|--help) usage_exit;;
+
+        -i) VMISO="$2"; shift;;
+        --install=*) VMISO="${1#*=}";;
+
+        -a) VMHDA="$2"; shift;;
+        --hda=*) VMHDA="${1#*=}";;
+
+        -b) VMHDB="$2"; shift;;
+        --hdb=*) VMHDB="${1#*=}";;
+
+        -r) VMRAM="$2"; shift;;
+        --ram=*) VMRAM="${1#*=}";;
+
+        --iommu) list_iommu; exit 0;;
+
+        -*) echo Unknown parameter [$@]; exit 1;;
+        *) break;;
+    esac
+    shift
+done
+
+if [ "$#" = "0" ]; then 
+    usage_exit
+fi
+
+if [ "$VMISO" != "" ]; then
+    vm_install $VMISO $1
+elif [ -e ${1}_hda.kvm ]; then 
+    vm_run $1
+else
+    echo Not found the KVM machine [${1}_hda.kvm]
+    exit 2
+fi
