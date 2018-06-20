@@ -142,6 +142,52 @@ install_firefox_latest()
   fi
 }
 
+install_virtualbox()
+{
+  echo INSTALLING Virtualbox | tee -a install.log
+  wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo | tee -a install.log
+  echo "cp virtualbox.repo /etc/yum.repos.d" | tee -a install.log
+  cp virtualbox.repo /etc/yum.repos.d
+  installer --enablerepo=epel dkms
+  installer VirtualBox-5.2
+  echo "usermod -a -G vboxusers `echo /home`" | tee -a install.log
+  usermod -a -G vboxusers `echo /home` | tee -a install.log
+}
+
+install_guest_addition()
+{
+  echo INSTALLING Virtualbox Guest Addition | tee -a install.log
+}
+
+setup_bash()
+{
+  echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a install.log
+  if test ! -d $CHROOT/etc/skel; then
+    mkdir -p $CHROOT/etc/skel
+  fi
+  cat >> $CHROOT/etc/skel/.bashrc << BASHRC
+# If not running interactively, don't do anything
+[[ \$- != *i* ]] && return
+
+PS1='\u:\w\\$ '
+
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias grep='grep --color=auto'
+alias l.='ls -d .* --color=auto'
+alias ls='ls --color=auto'
+alias ll='ls -l --color=auto'
+alias path='echo \$PATH'
+alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
+
+ulimit -c unlimited
+
+PATH="\$PATH:\$HOME/bin:." 
+
+BASHRC
+}
+
+
 #############################################################################
 # Install starting
 #############################################################################
@@ -204,14 +250,35 @@ installer arj
 #install vim
 install_vim
 
-#install the X11 desktop environment
+#install the C/C++ tool chains
+group_plant "Development Tools"
+
+#install s-record for firmware binary process
+installer srecord
+
+#install ffmpeg and libgd
+#installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
+
+#install python related. In default the python2 and python3 were all installed.
+# matplotlib requires python-dev
+#installer python-pip python-dev python-virtualenv python3-virtualenv
+# install machine learn kit
+#installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
+
+# setting the bash
+setup_bash
+
+#############################################################################
+# install the X11 desktop environment
+#############################################################################
 group_plant "X Window system"
 #installer xorg-fonts-100dpi xorg-fonts-75dpi
 case $DESKTOP in
   mate) install_desktop_mate ;;
   xfce) install_desktop_xfce ;;
   cinnamon) install_desktop_cinnamon ;;
-  gnome|*) install_desktop_gnome ;;
+  gnome) install_desktop_gnome ;;
+  *) exit ;;
 esac
 systemctl set-default graphical.target | tee -a install.log
 #systemctl isolate graphical.target
@@ -229,21 +296,11 @@ if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
   installer horai-ume-*-fonts ipa-*-fonts
 fi
 
-
 #install vim gui
 installer vim-gtk
 
 #install the GUI of git
 installer qgit
-
-#install the C/C++ tool chains
-group_plant "Development Tools"
-
-#install s-record for firmware binary process
-installer srecord
-
-#install ffmpeg and libgd
-#installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
 
 #install other tools
 installer meld 
@@ -269,12 +326,10 @@ installer librecad
 #installer openscad
 #installer blender
 
-#install python related. In default the python2 and python3 were all installed.
-# matplotlib requires python-dev
-#installer python-pip python-dev python-virtualenv python3-virtualenv
-# install machine learn kit
-#installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
-
+#install the Virtualbox or Guest Addition
+#install_virtualbox
+#install_guest_addition
+#installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
 
 #############################################################################
 # Setup Extra repos
@@ -287,31 +342,6 @@ installer librecad
 #############################################################################
 # Setup the useful scripts
 #############################################################################
-# setting the bash
-echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a install.log
-if test ! -d $CHROOT/etc/skel; then
-  mkdir -p $CHROOT/etc/skel
-fi
-cat >> $CHROOT/etc/skel/.bashrc << BASHRC
-# If not running interactively, don't do anything
-[[ \$- != *i* ]] && return
-
-PS1='\u:\w\\$ '
-
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias grep='grep --color=auto'
-alias l.='ls -d .* --color=auto'
-alias ls='ls --color=auto'
-alias ll='ls -l --color=auto'
-alias path='echo \$PATH'
-alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
-
-ulimit -c unlimited
-
-PATH="\$PATH:\$HOME/bin:." 
-
-BASHRC
 
 #############################################################################
 # The last part would be adding the default user
