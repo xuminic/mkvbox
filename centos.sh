@@ -14,8 +14,9 @@
 #############################################################################
 # Configure
 #############################################################################
-CHN_IM=ibus             # fcitx/ibus
-DESKTOP=mate            # mate/xfce/cinnamon/gnome
+CFG_IME=ibus             # fcitx/ibus
+CFG_DESKTOP=mate         # mate/xfce/cinnamon/gnome
+CFG_VMCN=                # vbox/vbgst/kvm
 
 #############################################################################
 # Installer with debugger
@@ -144,22 +145,25 @@ install_firefox_latest()
 
 install_virtualbox()
 {
+  local DEFUSER=`/bin/ls /home`
+  
   echo INSTALLING Virtualbox | tee -a install.log
   wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo | tee -a install.log
   echo "cp virtualbox.repo /etc/yum.repos.d" | tee -a install.log
   cp virtualbox.repo /etc/yum.repos.d
   #installer --enablerepo=epel dkms
   installer VirtualBox-5.2
-  echo "usermod -a -G vboxusers `echo /home`" | tee -a install.log
-  usermod -a -G vboxusers `echo /home` | tee -a install.log
+  echo "usermod -a -G vboxusers $DEFUSER" | tee -a install.log
+  usermod -a -G vboxusers $DEFUSER | tee -a install.log
 }
 
 install_guest_addition()
 {
-  echo INSTALLING Virtualbox Guest Addition | tee -a install.log
+  local DEFUSER=`/bin/ls /home`
+
   #install GNU GCC Compiler, kernel module and Development Environment
   group_plant "Development Tools"
-  installer kernel-headers
+  installer kernel-devel
 
   if test "x$CHROOT" != "x"; then
     echo This is a simulation | tee -a install.log
@@ -174,13 +178,23 @@ install_guest_addition()
   fi
   umount /mnt
 
+  # Fix the error while Building the OpenGL support module
+  cd /usr/src/kernels/$(uname -r)/include/drm 
+  ln -s /usr/include/drm/drm.h drm.h  
+  ln -s /usr/include/drm/drm_sarea.h drm_sarea.h  
+  ln -s /usr/include/drm/drm_mode.h drm_mode.h  
+  ln -s /usr/include/drm/drm_fourcc.h drm_fourcc.h
+  ls /usr/src/kernels/$(uname -r)/include/drm | tee -a install.log
+
   if test -e /root/VBoxLinuxAdditions.run; then
+    echo INSTALLING Virtualbox Guest Addition | tee -a install.log
     chmod 755 /root/VBoxLinuxAdditions.run
     /root/VBoxLinuxAdditions.run | tee -a install.log
 
-    local DEFUSER=`echo /home`
-    echo usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
-    usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+    if test "x$?" = "x0"; then
+      echo usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+      usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+    fi
   fi
 }
 
@@ -237,9 +251,9 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     -h|--help) usage_exit;;
 
-    -d|--desktop) DESKTOP="$2"; shift;;
+    -d|--desktop) CFG_DESKTOP="$2"; shift;;
 
-    -i|--ime) CHN_IM="$2"; shift;;
+    -i|--ime) CFG_IME="$2"; shift;;
 
     --vboxguest) install_guest_addition; exit 0;;
     --vboxhost) install_virtualbox; exit 0;;
@@ -257,7 +271,6 @@ installer epel-release
 local_plant http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
 
 #install RPM Fusion
-if test ! -e /etc/yum.repos.d/
 local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
 local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
@@ -331,7 +344,7 @@ setup_bash
 #############################################################################
 group_plant "X Window system"
 #installer xorg-fonts-100dpi xorg-fonts-75dpi
-case $DESKTOP in
+case $CFG_DESKTOP in
   mate) install_desktop_mate ;;
   xfce) install_desktop_xfce ;;
   cinnamon) install_desktop_cinnamon ;;
@@ -342,14 +355,14 @@ systemctl set-default graphical.target | tee -a install.log
 #systemctl isolate graphical.target
 
 
-case $CHN_IM in
+case $CFG_IME in
   ibus) #install the Chinese input method: IBus
     installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
   fcitx) #install the Chinese input method: Fcitx
     installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
 esac
 
-if test "x$CHN_IM" = xibus || test "x$CHN_IM" = xfcitx; then
+if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
   installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts 
   installer horai-ume-*-fonts ipa-*-fonts
 fi
@@ -385,9 +398,11 @@ installer librecad
 #installer blender
 
 #install the Virtualbox or Guest Addition
-#install_virtualbox
-#install_guest_addition
-#installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
+case $CFG_VMCN in
+  vbox) install_virtualbox ;;
+  vbgst) install_guest_addition ;;
+  kvm) installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
+esac
 
 #############################################################################
 # Setup Extra repos
