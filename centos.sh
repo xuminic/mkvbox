@@ -148,7 +148,7 @@ install_virtualbox()
   wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo | tee -a install.log
   echo "cp virtualbox.repo /etc/yum.repos.d" | tee -a install.log
   cp virtualbox.repo /etc/yum.repos.d
-  installer --enablerepo=epel dkms
+  #installer --enablerepo=epel dkms
   installer VirtualBox-5.2
   echo "usermod -a -G vboxusers `echo /home`" | tee -a install.log
   usermod -a -G vboxusers `echo /home` | tee -a install.log
@@ -157,6 +157,31 @@ install_virtualbox()
 install_guest_addition()
 {
   echo INSTALLING Virtualbox Guest Addition | tee -a install.log
+  #install GNU GCC Compiler, kernel module and Development Environment
+  group_plant "Development Tools"
+  installer kernel-headers
+
+  if test "x$CHROOT" != "x"; then
+    echo This is a simulation | tee -a install.log
+    return
+  fi
+
+  # try CDROM firstly for best matching the virtualbox host
+  mount /dev/sr0 /mnt
+  if test "x$?" = "x0"; then
+    echo cp -f /mnt/VBoxLinuxAdditions.run /root | tee -a install.log
+    cp -f /mnt/VBoxLinuxAdditions.run /root
+  fi
+  umount /mnt
+
+  if test -e /root/VBoxLinuxAdditions.run; then
+    chmod 755 /root/VBoxLinuxAdditions.run
+    /root/VBoxLinuxAdditions.run | tee -a install.log
+
+    local DEFUSER=`echo /home`
+    echo usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+    usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+  fi
 }
 
 setup_bash()
@@ -191,8 +216,39 @@ BASHRC
 #############################################################################
 # Install starting
 #############################################################################
+usage_exit()
+{
+  cat << my_usage
+$0 [OPTION]
+OPTION:
+  -d, --desktop     choose desktop [mate/xfce/cinnamon/gnome]
+  -i, --ime         choose IME input method [ibus/fcitx]
+      --vboxguest   install Virtualbox Guest Addition (insert iso first)
+      --vboxhost    install Virtualbox machine
+
+my_usage
+  exit 0
+}
+
 #create a log file
 touch install.log
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage_exit;;
+
+    -d|--desktop) DESKTOP="$2"; shift;;
+
+    -i|--ime) CHN_IM="$2"; shift;;
+
+    --vboxguest) install_guest_addition; exit 0;;
+    --vboxhost) install_virtualbox; exit 0;;
+
+    -*) echo Unknown parameter [$@]; exit 1;;
+    *) break;;
+  esac
+  shift
+done
 
 #install extra repos
 installer epel-release
@@ -201,6 +257,7 @@ installer epel-release
 local_plant http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
 
 #install RPM Fusion
+if test ! -e /etc/yum.repos.d/
 local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
 local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
@@ -237,6 +294,7 @@ fi
 
 #install ifconfig
 installer net-tools
+installer wget
 
 #install lspci
 installer pciutils
