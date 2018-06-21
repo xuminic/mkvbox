@@ -147,11 +147,16 @@ install_virtualbox()
 {
   local DEFUSER=`/bin/ls /home`
   
+  group_plant "Development Tools"
+  installer kernel-devel dkms wget
+
   echo INSTALLING Virtualbox | tee -a install.log
   wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo | tee -a install.log
-  echo "cp virtualbox.repo /etc/yum.repos.d" | tee -a install.log
-  cp virtualbox.repo /etc/yum.repos.d
-  #installer --enablerepo=epel dkms
+  if test -e virtualbox.repo; then
+    echo "cp virtualbox.repo /etc/yum.repos.d" | tee -a install.log
+    cp -f virtualbox.repo /etc/yum.repos.d
+  fi
+
   installer VirtualBox-5.2
   echo "usermod -a -G vboxusers $DEFUSER" | tee -a install.log
   usermod -a -G vboxusers $DEFUSER | tee -a install.log
@@ -159,7 +164,8 @@ install_virtualbox()
 
 install_guest_addition()
 {
-  # FIXED: GA 4.3.x has problem with new kernels so better using 5.2.x instead.
+  # FIXED: Most guest addition has problem with CentOS7.5/7.6. Only 5.2.x test builds work.
+  # https://forums.virtualbox.org/viewtopic.php?f=3&t=87529
   local DEFUSER=`/bin/ls /home`
 
   #install GNU GCC Compiler, kernel module and Development Environment
@@ -173,7 +179,7 @@ install_guest_addition()
 
   # try CDROM firstly for best matching the virtualbox host
   mount /dev/sr0 /mnt
-  if test "x$?" = "x0"; then
+  if test -e /mnt/VBoxLinuxAdditions.run; then
     echo cp -f /mnt/VBoxLinuxAdditions.run /root | tee -a install.log
     cp -f /mnt/VBoxLinuxAdditions.run /root
   fi
