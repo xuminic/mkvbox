@@ -21,56 +21,37 @@ CFG_VMCN=                # vbox/vbgst/kvm
 #############################################################################
 # Installer with debugger
 #############################################################################
-CHROOT=
-#CHROOT=./tmp
+#CHROOT=
+CHROOT=./tmp
+
+logdo()
+{
+  echo $@ | tee -a install.log
+  if test "x$CHROOT" = x; then
+    eval $@ | tee -a install.log
+  fi
+}
 
 installer()
 {
   echo INSTALLING $* | tee -a install.log
-  if test "x$CHROOT" = x; then
-    yum -y install $* | tee -a install.log
-  else
-    echo yum -y install $* | tee -a install.log
-  fi
+  logdo yum -y install $@
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a install.log
     exit 1
   fi
 }
 
-group_plant()
+group_install()
 {
   echo INSTALLING "$@" | tee -a install.log
-  if test "x$CHROOT" = x; then
-    yum -y groupinstall "$@" | tee -a install.log
-  else
-    echo yum -y groupinstall "$@" | tee -a install.log
-  fi
+  logdo yum -y groupinstall "$@"
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a install.log
     exit 1
   fi
 }
 
-local_plant()
-{
-  echo INSTALLING "$@" | tee -a install.log
-  if test "x$CHROOT" = x; then
-    rpm -Uvh "$@" | tee -a install.log
-  else
-    echo rpm -Uvh "$@" | tee -a install.log
-  fi
-}
-
-rpm_signature()
-{
-  echo IMPORT Signature "$@" | tee -a install.log
-  if test "x$CHROOT" = x; then
-    rpm --import "$@" | tee -a install.log
-  else
-    echo rpm --import "$@" | tee -a install.log
-  fi
-}
 
 #############################################################################
 # Install packages
@@ -83,13 +64,13 @@ install_desktop_mate()
   # https://bugzilla.redhat.com/show_bug.cgi?id=1589486
   installer --enablerepo=epel-testing  atril atril-caja
 
-  group_plant "MATE Desktop"
+  group_install "MATE Desktop"
   installer caja-share
 }
 
 install_desktop_xfce()
 {
-  group_plant "Xfce"
+  group_install "Xfce"
 }
 
 install_desktop_cinnamon()
@@ -99,7 +80,7 @@ install_desktop_cinnamon()
 
 install_desktop_gnome()
 {
-  group_plant "Server with GUI"
+  group_install "Server with GUI"
 }
 
 
@@ -108,12 +89,10 @@ install_vim()
   installer vim
 
   if test -e $CHROOT/usr/bin/vi; then
-    echo "Removed the default 'vi'" | tee -a install.log
-    rm $CHROOT/usr/bin/vi
+    logdo rm $CHROOT/usr/bin/vi
   fi
   if test -e $CHROOT/usr/bin/vim; then
-    echo "Linked the vi to 'vim'" | tee -a install.log
-    ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
+    logdo ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
   fi
   
   if test ! -d $CHROOT/etc/skel; then
@@ -129,17 +108,14 @@ VIMRC
 
 install_firefox_latest()
 {
-  if test "x$CHROOT" = x; then
-    wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US" | tee -a install.log
-    tar xfj firefox-*.tar.bz2 -C /opt | tee -a install.log
-    rm -f firefox-*.tar.bz2
-    echo "Old Firefox will be renamed to /usr/bin/firefox-52" | tee -a install.log
-    mv -f /usr/bin/firefox /usr/bin/firefox-52
-    echo ln -s /opt/firefox/firefox /usr/bin/firefox | tee -a install.log
-    ln -s /opt/firefox/firefox /usr/bin/firefox
+  logdo wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"
+  if test ! -e firefox-*.tar.bz2; then
+    echo ERROR: firefox not downloaded! | tee -a install.log
   else
-    echo wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US" | tee -a install.log
-    echo tar xfj firefox-*.tar.bz2 -C /opt | tee -a install.log
+    logdo tar xfj firefox-*.tar.bz2 -C /opt 
+    logdo rm -f firefox-*.tar.bz2
+    logdo mv -f /usr/bin/firefox /usr/bin/firefox-52
+    logdo ln -s /opt/firefox/firefox /usr/bin/firefox
   fi
 }
 
@@ -147,20 +123,18 @@ install_virtualbox()
 {
   local DEFUSER=`/bin/ls /home`
   
-  group_plant "Development Tools"
+  group_install "Development Tools"
   installer kernel-devel dkms wget
 
   echo INSTALLING Virtualbox | tee -a install.log
-  wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo | tee -a install.log
+  logdo wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
   if test -e virtualbox.repo; then
-    echo "cp virtualbox.repo /etc/yum.repos.d" | tee -a install.log
-    cp -f virtualbox.repo /etc/yum.repos.d
+    logdo cp -f virtualbox.repo /etc/yum.repos.d
   fi
 
   installer VirtualBox-5.2
   if test "$DEFUSER" != ""; then
-    echo "usermod -a -G vboxusers $DEFUSER" | tee -a install.log
-    usermod -a -G vboxusers $DEFUSER | tee -a install.log
+    logdo usermod -a -G vboxusers $DEFUSER
   fi
 }
 
@@ -171,21 +145,15 @@ install_guest_addition()
   local DEFUSER=`/bin/ls /home`
 
   #install GNU GCC Compiler, kernel module and Development Environment
-  group_plant "Development Tools"
+  group_install "Development Tools"
   installer kernel-devel dkms
 
-  if test "x$CHROOT" != "x"; then
-    echo This is a simulation | tee -a install.log
-    return
-  fi
-
   # try CDROM firstly for best matching the virtualbox host
-  mount /dev/sr0 /mnt
+  logdo mount /dev/sr0 /mnt
   if test -e /mnt/VBoxLinuxAdditions.run; then
-    echo cp -f /mnt/VBoxLinuxAdditions.run /root | tee -a install.log
-    cp -f /mnt/VBoxLinuxAdditions.run /root
+    logdo cp -f /mnt/VBoxLinuxAdditions.run /root
   fi
-  umount /mnt
+  logdo umount /mnt
 
   # Fix the error while Building the OpenGL support module in CentOS 6
 #  cd /usr/src/kernels/$(uname -r)/include/drm 
@@ -199,12 +167,12 @@ install_guest_addition()
 
   if test -e /root/VBoxLinuxAdditions.run; then
     echo INSTALLING Virtualbox Guest Addition | tee -a install.log
-    chmod 755 /root/VBoxLinuxAdditions.run
-    /root/VBoxLinuxAdditions.run | tee -a install.log
+    echo WARNING: RHEL/CENTOS 7.5+ require Guest Addition 5.2.x test build | tee -a install.log
+    logdo chmod 755 /root/VBoxLinuxAdditions.run
+    logdo /root/VBoxLinuxAdditions.run
 
     if test "x$?" = "x0" -a "x$DEFUSER" != "x"; then
-      echo usermod -a -G vboxsf $DEFUSER | tee -a install.log
-      usermod -a -G vboxsf $DEFUSER | tee -a install.log
+      logdo usermod -a -G vboxsf $DEFUSER
     fi
   fi
 }
@@ -278,11 +246,11 @@ done
 installer epel-release
 
 #install Nux Dextop
-local_plant http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
+logdo rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
 
 #install RPM Fusion
-local_plant https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
-local_plant https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
+logdo rpm -Uvh https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
+logdo rpm -Uvh https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
 #install google repos
 cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLREPO
@@ -311,9 +279,7 @@ GGLREPO
 
 
 #update and upgrade to the newest releases
-if test "x$CHROOT" = x; then
-  yum -y update | tee -a install.log
-fi
+logdo yum -y update
 
 #install ifconfig
 installer net-tools
@@ -332,7 +298,7 @@ installer arj
 install_vim
 
 #install the C/C++ tool chains
-group_plant "Development Tools"
+group_install "Development Tools"
 
 #install s-record for firmware binary process
 installer srecord
@@ -352,7 +318,7 @@ setup_bash
 #############################################################################
 # install the X11 desktop environment
 #############################################################################
-group_plant "X Window system"
+group_install "X Window system"
 #installer xorg-fonts-100dpi xorg-fonts-75dpi
 case $CFG_DESKTOP in
   mate) install_desktop_mate ;;
@@ -361,7 +327,7 @@ case $CFG_DESKTOP in
   gnome) install_desktop_gnome ;;
   *) exit ;;
 esac
-systemctl set-default graphical.target | tee -a install.log
+logdo systemctl set-default graphical.target
 #systemctl isolate graphical.target
 
 
@@ -376,6 +342,13 @@ if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
   installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts 
   installer horai-ume-*-fonts ipa-*-fonts
 fi
+
+#install the Virtualbox or Guest Addition
+case $CFG_VMCN in
+  vbox) install_virtualbox ;;
+  vbgst) install_guest_addition ;;
+  kvm) installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
+esac
 
 #install vim gui
 installer vim-gtk
@@ -407,20 +380,13 @@ installer librecad
 #installer openscad
 #installer blender
 
-#install the Virtualbox or Guest Addition
-case $CFG_VMCN in
-  vbox) install_virtualbox ;;
-  vbgst) install_guest_addition ;;
-  kvm) installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
-esac
-
 #############################################################################
 # Setup Extra repos
 # ELRepo breaks X Window system so it must be postponed
 #############################################################################
 #install ELRepo
-#rpm_signature https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
-#local_plant http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+#logdo rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+#logdo rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
 
 #############################################################################
 # Setup the useful scripts
