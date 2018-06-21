@@ -159,11 +159,12 @@ install_virtualbox()
 
 install_guest_addition()
 {
+  # FIXED: GA 4.3.x has problem with new kernels so better using 5.2.x instead.
   local DEFUSER=`/bin/ls /home`
 
   #install GNU GCC Compiler, kernel module and Development Environment
   group_plant "Development Tools"
-  installer kernel-devel
+  installer kernel-devel dkms
 
   if test "x$CHROOT" != "x"; then
     echo This is a simulation | tee -a install.log
@@ -178,13 +179,15 @@ install_guest_addition()
   fi
   umount /mnt
 
-  # Fix the error while Building the OpenGL support module
-  cd /usr/src/kernels/$(uname -r)/include/drm 
-  ln -s /usr/include/drm/drm.h drm.h  
-  ln -s /usr/include/drm/drm_sarea.h drm_sarea.h  
-  ln -s /usr/include/drm/drm_mode.h drm_mode.h  
-  ln -s /usr/include/drm/drm_fourcc.h drm_fourcc.h
-  ls /usr/src/kernels/$(uname -r)/include/drm | tee -a install.log
+  # Fix the error while Building the OpenGL support module in CentOS 6
+#  cd /usr/src/kernels/$(uname -r)/include/drm 
+#  if test ! -e drm.h; then
+#    ln -s /usr/include/drm/drm.h drm.h  
+#    ln -s /usr/include/drm/drm_sarea.h drm_sarea.h  
+#    ln -s /usr/include/drm/drm_mode.h drm_mode.h  
+#    ln -s /usr/include/drm/drm_fourcc.h drm_fourcc.h
+#  fi
+#  ls -l /usr/src/kernels/$(uname -r)/include/drm/drm.h | tee -a install.log
 
   if test -e /root/VBoxLinuxAdditions.run; then
     echo INSTALLING Virtualbox Guest Addition | tee -a install.log
@@ -192,8 +195,8 @@ install_guest_addition()
     /root/VBoxLinuxAdditions.run | tee -a install.log
 
     if test "x$?" = "x0"; then
-      echo usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
-      usermod -a -G sudo,vboxsf $DEFUSER | tee -a install.log
+      echo usermod -a -G vboxsf $DEFUSER | tee -a install.log
+      usermod -a -G vboxsf $DEFUSER | tee -a install.log
     fi
   fi
 }
@@ -237,8 +240,9 @@ $0 [OPTION]
 OPTION:
   -d, --desktop     choose desktop [mate/xfce/cinnamon/gnome]
   -i, --ime         choose IME input method [ibus/fcitx]
-      --vboxguest   install Virtualbox Guest Addition (insert iso first)
-      --vboxhost    install Virtualbox machine
+  -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
+      --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
+      --vboxhost    quick install Virtualbox machine
 
 my_usage
   exit 0
@@ -250,11 +254,9 @@ touch install.log
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -h|--help) usage_exit;;
-
     -d|--desktop) CFG_DESKTOP="$2"; shift;;
-
     -i|--ime) CFG_IME="$2"; shift;;
-
+    -v|--vm) CFG_VMCN="$2"; shift;;
     --vboxguest) install_guest_addition; exit 0;;
     --vboxhost) install_virtualbox; exit 0;;
 
