@@ -158,8 +158,10 @@ install_virtualbox()
   fi
 
   installer VirtualBox-5.2
-  echo "usermod -a -G vboxusers $DEFUSER" | tee -a install.log
-  usermod -a -G vboxusers $DEFUSER | tee -a install.log
+  if test "$DEFUSER" != ""; then
+    echo "usermod -a -G vboxusers $DEFUSER" | tee -a install.log
+    usermod -a -G vboxusers $DEFUSER | tee -a install.log
+  fi
 }
 
 install_guest_addition()
@@ -200,7 +202,7 @@ install_guest_addition()
     chmod 755 /root/VBoxLinuxAdditions.run
     /root/VBoxLinuxAdditions.run | tee -a install.log
 
-    if test "x$?" = "x0"; then
+    if test "x$?" = "x0" -a "x$DEFUSER" != "x"; then
       echo usermod -a -G vboxsf $DEFUSER | tee -a install.log
       usermod -a -G vboxsf $DEFUSER | tee -a install.log
     fi
