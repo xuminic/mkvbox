@@ -26,7 +26,7 @@ CFG_WEB=		# firefox-quantum
 # ifconfig/lspci/samba/... always needed
 CFG_CLI="net-tools wget pciutils cifs-utils arj git"
 # firmware tools
-#CFG_CLI="$CFG_CLI srecord"				
+#CFG_CLI="$CFG_CLI srecord hexedit"				
 # ffmpeg & libgd
 #CFG_CLI="$CFG_CLI libavformat-dev libswscale-dev libx11-dev zlib1g-dev"
 #CFG_CLI="$CFG_CLI libgd2-dev"
@@ -44,8 +44,13 @@ CFG_GUI="vim-gtk qgit meld qbittorrent"
 #CFG_GUI="$CFG_GUI horai-ume-*-fonts ipa-*-fonts"
 # browers
 #CFG_GUI="$CFG_GUI firefox chromium google-chrome-stable"
+#CFG_GUI="$CFG_GUI filezilla putty wireshark"
+# Remote Desktop Client
+#CFG_GUI="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
+# IM: pidgin
+#CFG_GUI="$CFG_GUI pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts"
 # image and picture tools
-#CFG_GUI="$CFG_GUI geeqie imagemagick gimp inkscape"
+#CFG_GUI="$CFG_GUI geeqie gthumb imagemagick gimp inkscape"
 # office suite
 #CFG_GUI="$CFG_GUI libreoffice"	
 # CAD suites
