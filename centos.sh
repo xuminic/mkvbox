@@ -23,21 +23,35 @@ CFG_DESKTOP=mate	# mate/xfce/cinnamon/gnome
 CFG_VMCN=		# vbox/vbgst/kvm
 CFG_WEB=		# firefox-quantum 
 
-CFG_CLI="net-tools wget pciutils cifs-utils arj git"	# ifconfig/lspci/samba/... always needed
-#CFG_CLI="$CFG_CLI srecord"				# firmware tools
-#CFG_CLI="$CFG_CLI libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"	# ffmpeg & libgd
-#CFG_CLI="$CFG_CLI python-pip python-dev python-virtualenv python3-virtualenv"		# python basic
-#CFG_CLI="$CFG_CLI python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn"	# python machine learn
-CFG_GUI="vim-gtk qgit meld qbittorrent"			# general tools
-#CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"				# old style X fonts
-#CFG_GUI="$CFG_GUI wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts"	# chinese fonts
-#CFG_GUI="$CFG_GUI horai-ume-*-fonts ipa-*-fonts"				# japanese fonts
-#CFG_GUI="$CFG_GUI firefox chromium google-chrome-stable"			# browers
-#CFG_GUI="$CFG_GUI geeqie imagemagick gimp inkscape"	# image and picture tools
-#CFG_GUI="$CFG_GUI libreoffice"				# office suite
-#CFG_GUI="$CFG_GUI librecad freecad openscad blender"	# CAD suites
-#CFG_GUI="$CFG_GUI vlc smplayer"			# video player
+# ifconfig/lspci/samba/... always needed
+CFG_CLI="net-tools wget pciutils cifs-utils arj git"
+# firmware tools
+#CFG_CLI="$CFG_CLI srecord"				
+# ffmpeg & libgd
+#CFG_CLI="$CFG_CLI libavformat-dev libswscale-dev libx11-dev zlib1g-dev"
+#CFG_CLI="$CFG_CLI libgd2-dev"
+# python basic
+#CFG_CLI="$CFG_CLI python-pip python-dev python-virtualenv python3-virtualenv"
+# python machine learn
+#CFG_CLI="$CFG_CLI python2.7-scipy python3-scipy python-sklearn python2.7-sklearn"
 
+# general tools
+CFG_GUI="vim-gtk qgit meld qbittorrent"
+# old style X fonts
+#CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
+# chinese fonts and japanese fonts
+#CFG_GUI="$CFG_GUI wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts"
+#CFG_GUI="$CFG_GUI horai-ume-*-fonts ipa-*-fonts"
+# browers
+#CFG_GUI="$CFG_GUI firefox chromium google-chrome-stable"
+# image and picture tools
+#CFG_GUI="$CFG_GUI geeqie imagemagick gimp inkscape"
+# office suite
+#CFG_GUI="$CFG_GUI libreoffice"	
+# CAD suites
+#CFG_GUI="$CFG_GUI librecad freecad openscad blender"
+# video player
+#CFG_GUI="$CFG_GUI vlc smplayer"
 # GStreamer codec collection
 #CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base gstreamer-plugins-good \
 #	  gstreamer-plugins-bad gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
@@ -63,9 +77,8 @@ logdo()
 
 installer()
 {
-  echo INSTALLING $* | tee -a install.log
+  echo -e \\nINSTALLING $* | tee -a install.log
   logdo yum -y install "$@"
-  echo "" | tee -a install.log
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a install.log
     exit 1
@@ -74,9 +87,8 @@ installer()
 
 group_install()
 {
-  echo INSTALLING "$@" | tee -a install.log
+  echo -e \\nINSTALLING "$@" | tee -a install.log
   logdo yum -y groupinstall \"$@\"
-  echo "" | tee -a install.log
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a install.log
     exit 1
@@ -141,7 +153,7 @@ VIMRC
 
 install_firefox_latest()
 {
-  logdo wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US\"
+  logdo wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
   if test ! -e firefox-*.tar.bz2; then
     echo ERROR: firefox not downloaded! | tee -a install.log
     exit
@@ -386,7 +398,7 @@ if test "$CFG_GUI" != ""; then
 fi
 
 #install the additional browsers
-if test "$FG_WEB" = "firefox-quantum"; then
+if test "$CFG_WEB" = "firefox-quantum"; then
   install_firefox_latest
 elif test "$CFG_WEB" != ""; then
   installer $CFG_WEB
