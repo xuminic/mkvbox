@@ -159,13 +159,15 @@ VIMRC
 install_firefox_latest()
 {
   logdo wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
-  if test ! -e firefox-*.tar.bz2; then
+
+  local FFOX=firefox-*
+  if test ! -e $FFOX; then
     echo ERROR: firefox not downloaded! | tee -a install.log
     exit
   fi
 
-  logdo tar xfj firefox-*.tar.bz2 -C /opt 
-  logdo rm -f firefox-*.tar.bz
+  logdo tar xfj $FFOX -C /opt 
+  logdo rm -f $FFOX
 
   if test -L /usr/bin/firefox; then	# firefox has already been linked out
     echo Firefox updated. | tee -a install.log
@@ -198,7 +200,7 @@ install_virtualbox()
   group_install "Development Tools"
   installer kernel-devel dkms wget
 
-  echo INSTALLING Virtualbox | tee -a install.log
+  echo -e \\nINSTALLING Virtualbox | tee -a install.log
   logdo wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
   if test -e virtualbox.repo; then
     logdo cp -f virtualbox.repo /etc/yum.repos.d
@@ -238,7 +240,7 @@ install_guest_addition()
 #  ls -l /usr/src/kernels/$(uname -r)/include/drm/drm.h | tee -a install.log
 
   if test -e /root/VBoxLinuxAdditions.run; then
-    echo INSTALLING Virtualbox Guest Addition | tee -a install.log
+    echo -e \\nINSTALLING Virtualbox Guest Addition | tee -a install.log
     echo WARNING: RHEL/CENTOS 7.5+ require Guest Addition 5.2.x test build | tee -a install.log
     logdo chmod 755 /root/VBoxLinuxAdditions.run
     logdo /root/VBoxLinuxAdditions.run
