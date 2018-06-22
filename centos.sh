@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Installation:
 #  1. minimem installation with root only 
 #
@@ -8,34 +8,64 @@
 #  3. git clone https://github.com/xuminic/mkvbox.git
 #  4. run 'centos.sh'
 #
+# Notes:
+#  * matplotlib requires python-dev
+#  * gstreamer1-vaapi seems a trouble maker
+#
 # History:
 #
 
 #############################################################################
 # Configure
 #############################################################################
-CFG_IME=ibus             # fcitx/ibus
-CFG_DESKTOP=mate         # mate/xfce/cinnamon/gnome
-CFG_VMCN=                # vbox/vbgst/kvm
+CFG_IME=ibus		# fcitx/ibus
+CFG_DESKTOP=mate	# mate/xfce/cinnamon/gnome
+CFG_VMCN=		# vbox/vbgst/kvm
+CFG_WEB=		# firefox-quantum 
+
+CFG_CLI="net-tools wget pciutils cifs-utils arj git"	# ifconfig/lspci/samba/... always needed
+#CFG_CLI="$CFG_CLI srecord"				# firmware tools
+#CFG_CLI="$CFG_CLI libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"	# ffmpeg & libgd
+#CFG_CLI="$CFG_CLI python-pip python-dev python-virtualenv python3-virtualenv"		# python basic
+#CFG_CLI="$CFG_CLI python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn"	# python machine learn
+CFG_GUI="vim-gtk qgit meld qbittorrent"			# general tools
+#CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"				# old style X fonts
+#CFG_GUI="$CFG_GUI wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts"	# chinese fonts
+#CFG_GUI="$CFG_GUI horai-ume-*-fonts ipa-*-fonts"				# japanese fonts
+#CFG_GUI="$CFG_GUI firefox chromium google-chrome-stable"			# browers
+#CFG_GUI="$CFG_GUI geeqie imagemagick gimp inkscape"	# image and picture tools
+#CFG_GUI="$CFG_GUI libreoffice"				# office suite
+#CFG_GUI="$CFG_GUI librecad freecad openscad blender"	# CAD suites
+#CFG_GUI="$CFG_GUI vlc smplayer"			# video player
+
+# GStreamer codec collection
+#CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base gstreamer-plugins-good \
+#	  gstreamer-plugins-bad gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
+#	  gstreamer-plugins-ugly gstreamer-plugins-base-tools \
+#	  gstreamer1 gstreamer1-libav gstreamer1-plugins-base streamer1-plugins-base-tools \
+#	  gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
+#	  gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free
+
 
 #############################################################################
 # Installer with debugger
 #############################################################################
-#CHROOT=
-CHROOT=./tmp
+CHROOT=
+#CHROOT=./tmp
 
 logdo()
 {
   echo $@ | tee -a install.log
   if test "x$CHROOT" = x; then
-    eval $@ | tee -a install.log
+    eval $@ 2>&1 | tee -a install.log
   fi
 }
 
 installer()
 {
   echo INSTALLING $* | tee -a install.log
-  logdo yum -y install $@
+  logdo yum -y install "$@"
+  echo "" | tee -a install.log
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a install.log
     exit 1
@@ -45,7 +75,8 @@ installer()
 group_install()
 {
   echo INSTALLING "$@" | tee -a install.log
-  logdo yum -y groupinstall "$@"
+  logdo yum -y groupinstall \"$@\"
+  echo "" | tee -a install.log
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a install.log
     exit 1
@@ -62,7 +93,9 @@ install_desktop_mate()
   # some one removed libwebkitgtk so it broken the atril
   # currently the atril can be recovered from the test repo
   # https://bugzilla.redhat.com/show_bug.cgi?id=1589486
-  installer --enablerepo=epel-testing  atril atril-caja
+  
+  #installer --enablerepo=epel-testing  atril atril-caja
+  logdo yum -y --enablerepo=epel-testing install atril atril-caja
 
   group_install "MATE Desktop"
   installer caja-share
@@ -108,14 +141,36 @@ VIMRC
 
 install_firefox_latest()
 {
-  logdo wget --content-disposition "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"
+  logdo wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US\"
   if test ! -e firefox-*.tar.bz2; then
     echo ERROR: firefox not downloaded! | tee -a install.log
-  else
-    logdo tar xfj firefox-*.tar.bz2 -C /opt 
-    logdo rm -f firefox-*.tar.bz2
+    exit
+  fi
+
+  logdo tar xfj firefox-*.tar.bz2 -C /opt 
+  logdo rm -f firefox-*.tar.bz
+
+  if test -L /usr/bin/firefox; then	# firefox has already been linked out
+    echo Firefox updated. | tee -a install.log
+  elif test -e /usr/bin/firefox; then
     logdo mv -f /usr/bin/firefox /usr/bin/firefox-52
     logdo ln -s /opt/firefox/firefox /usr/bin/firefox
+  else
+    cat >  $CHROOT/usr/share/applications/firefox.desktop << FIREFOX
+[Desktop Entry]
+Version=1.0
+Name=Firefox Quantum Web Browser
+Exec=/opt/firefox/firefox %u
+Exec=/opt/firefox/firefox -new-window
+Exec=/opt/firefox/firefox -private-window
+Icon=firefox
+Terminal=false
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;text/mml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+Categories=Network;WebBrowser;
+X-Desktop-File-Install-Version=0.23
+FIREFOX
   fi
 }
 
@@ -127,7 +182,7 @@ install_virtualbox()
   installer kernel-devel dkms wget
 
   echo INSTALLING Virtualbox | tee -a install.log
-  logdo wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
+  logdo wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
   if test -e virtualbox.repo; then
     logdo cp -f virtualbox.repo /etc/yum.repos.d
   fi
@@ -219,13 +274,14 @@ OPTION:
   -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
       --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
       --vboxhost    quick install Virtualbox machine
+      --firefox     install the latest firefox quantum
 
 my_usage
   exit 0
 }
 
 #create a log file
-touch install.log
+date > install.log
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -235,6 +291,7 @@ while [ "$#" -gt 0 ]; do
     -v|--vm) CFG_VMCN="$2"; shift;;
     --vboxguest) install_guest_addition; exit 0;;
     --vboxhost) install_virtualbox; exit 0;;
+    --firefox) install_firefox_latest; exit 0;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;
@@ -281,36 +338,16 @@ GGLREPO
 #update and upgrade to the newest releases
 logdo yum -y update
 
-#install ifconfig
-installer net-tools
-installer wget
-
-#install lspci
-installer pciutils
-
-#install CIFS to support samba file system
-installer cifs-utils
-
-#install system enhancement tool
-installer arj
+#install the command line applications
+if test "$CFG_CLI" != ""; then
+  installer $CFG_CLI
+fi
 
 #install vim
 install_vim
 
 #install the C/C++ tool chains
 group_install "Development Tools"
-
-#install s-record for firmware binary process
-installer srecord
-
-#install ffmpeg and libgd
-#installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
-
-#install python related. In default the python2 and python3 were all installed.
-# matplotlib requires python-dev
-#installer python-pip python-dev python-virtualenv python3-virtualenv
-# install machine learn kit
-#installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
 
 # setting the bash
 setup_bash
@@ -319,7 +356,6 @@ setup_bash
 # install the X11 desktop environment
 #############################################################################
 group_install "X Window system"
-#installer xorg-fonts-100dpi xorg-fonts-75dpi
 case $CFG_DESKTOP in
   mate) install_desktop_mate ;;
   xfce) install_desktop_xfce ;;
@@ -330,18 +366,12 @@ esac
 logdo systemctl set-default graphical.target
 #systemctl isolate graphical.target
 
-
 case $CFG_IME in
   ibus) #install the Chinese input method: IBus
     installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
   fcitx) #install the Chinese input method: Fcitx
     installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
 esac
-
-if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-  installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts 
-  installer horai-ume-*-fonts ipa-*-fonts
-fi
 
 #install the Virtualbox or Guest Addition
 case $CFG_VMCN in
@@ -350,35 +380,17 @@ case $CFG_VMCN in
   kvm) installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
 esac
 
-#install vim gui
-installer vim-gtk
+# install desktop application
+if test "$CFG_GUI" != ""; then
+  installer $CFG_GUI
+fi
 
-#install the GUI of git
-installer qgit
-
-#install other tools
-installer meld 
-#installer qbittorrent
-
-#install the browsers
-#installer firefox-esr 
-#installer chromium
-#install_firefox_latest
-#installer google-chrome-stable
-
-#install image viewers and editors
-installer geeqie imagemagick
-installer gimp
-#installer inkscape
-
-#install libre-office
-installer libreoffice 
-
-#install CADs
-installer librecad
-#installer freecad
-#installer openscad
-#installer blender
+#install the additional browsers
+if test "$FG_WEB" = "firefox-quantum"; then
+  install_firefox_latest
+elif test "$CFG_WEB" != ""; then
+  installer $CFG_WEB
+fi
 
 #############################################################################
 # Setup Extra repos
@@ -390,9 +402,5 @@ installer librecad
 
 #############################################################################
 # Setup the useful scripts
-#############################################################################
-
-#############################################################################
-# The last part would be adding the default user
 #############################################################################
 
