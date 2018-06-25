@@ -41,8 +41,6 @@ CFG_GUI="vim-gtk qgit meld qbittorrent"
 #### old style X fonts
 #CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
 #### chinese fonts and japanese fonts
-#CFG_GUI="$CFG_GUI wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts"
-#CFG_GUI="$CFG_GUI horai-ume-*-fonts ipa-*-fonts"
 #### browers
 #CFG_GUI="$CFG_GUI firefox chromium google-chrome-stable"
 #CFG_GUI="$CFG_GUI filezilla putty wireshark"
@@ -377,13 +375,16 @@ setup_bash
 #############################################################################
 # install the X11 desktop environment
 #############################################################################
+if test "x$CFG_DESKTOP" = "x"; then	# X11 GUI is not required.
+  exit 0
+fi
+
 group_install "X Window system"
 case $CFG_DESKTOP in
   mate) install_desktop_mate ;;
   xfce) install_desktop_xfce ;;
   cinnamon) install_desktop_cinnamon ;;
-  gnome) install_desktop_gnome ;;
-  *) exit ;;
+  gnome|*) install_desktop_gnome ;;
 esac
 logdo systemctl set-default graphical.target
 #systemctl isolate graphical.target
@@ -394,6 +395,12 @@ case $CFG_IME in
   fcitx) #install the Chinese input method: Fcitx
     installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
 esac
+
+# install extra chinese fonts and japanese fonts
+if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
+  installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts
+  installer horai-ume-*-fonts ipa-*-fonts
+fi
 
 #install the Virtualbox or Guest Addition
 case $CFG_VMCN in

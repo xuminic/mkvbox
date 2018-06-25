@@ -17,18 +17,55 @@
 #############################################################################
 CFG_IME=ibus            # fcitx/ibus
 CFG_DESKTOP=mate        # lxde/mate
-CFG_VMCN=               # vbox/vbgst/kvm
+CFG_VMCN=vbgst          # vbox/vbgst/kvm
 CFG_WEB=                # firefox-quantum
 
-# ifconfig/lspci/samba/... always needed
-CFG_CLI="net-tools wget pciutils cifs-utils arj git"
+#### ifconfig/lspci/samba/... always needed
+CFG_CLI="aptitude net-tools wget pciutils cifs-utils arj git"
+#### development tools
+#CFG_CLI="$CFG_CLI build-essential manpages-dev autoconf libtool"
+#### binary tools
+#CFG_CLI="$CFG_CLI srecord"
+#### ffmpeg and libgd
+#CFG_CLI="$CFG_CLI libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"
+#### matplotlib requires python-dev
+#CFG_CLI="$CFG_CLI python-pip python-dev python-virtualenv python3-virtualenv"
+#### machine learn kit
+#CFG_CLI="$CFG_CLI python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn"
 
-# general tools
-CFG_GUI="vim-gtk qgit meld qbittorrent"
-# old style X fonts
+#### general tools
+CFG_GUI="vim-gtk qgit meld ghex qbittorrent"
+#### old style X fonts
 #CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
-# chinese fonts and japanese fonts
+#### basic chinese fonts and japanese fonts
 #CFG_GUI="$CFG_GUI fonts-wqy-microhei fonts-wqy-zenhei"
+#### browers
+#CFG_GUI="$CFG_GUI firefox-esr chromium google-chrome-stable"
+#CFG_GUI="$CFG_GUI filezilla putty wireshark"
+#### Remote Desktop Client
+#CFG_GUI="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
+#### IM: pidgin
+#CFG_GUI="$CFG_GUI pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts"
+#### image and picture tools
+#CFG_GUI="$CFG_GUI geeqie gthumb imagemagick gimp inkscape"
+#### office suite
+#CFG_GUI="$CFG_GUI libreoffice" 
+#### CAD suites
+#CFG_GUI="$CFG_GUI librecad freecad openscad blender"
+#### video player
+#CFG_GUI="$CFG_GUI vlc smplayer"
+#### GStreamer codec collection
+#CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base \
+#         gstreamer-plugins-good gstreamer-plugins-bad \
+#         gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
+#         gstreamer-plugins-ugly gstreamer-plugins-base-tools \
+#         gstreamer1 gstreamer1-libav gstreamer1-plugins-base \
+#         streamer1-plugins-base-tools gstreamer1-plugins-good \
+#         gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
+#         gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free
+
+
+
 
 #############################################################################
 # Installer with debugger
@@ -217,8 +254,40 @@ BASHRC
 #############################################################################
 # Install starting
 #############################################################################
+usage_exit()
+{
+  cat << my_usage
+$0 [OPTION]
+OPTION:
+  -d, --desktop     choose desktop [mate/xfce/cinnamon/gnome]
+  -i, --ime         choose IME input method [ibus/fcitx]
+  -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
+      --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
+      --vboxhost    quick install Virtualbox machine
+      --firefox     install the latest firefox quantum
+
+my_usage
+  exit 0
+}
+
 #create a log file
-touch install.log
+date > install.log
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage_exit;;
+    -d|--desktop) CFG_DESKTOP="$2"; shift;;
+    -i|--ime) CFG_IME="$2"; shift;;
+    -v|--vm) CFG_VMCN="$2"; shift;;
+    --vboxguest) install_guest_addition; exit 0;;
+    --vboxhost) install_virtualbox; exit 0;;
+    --firefox) install_firefox_latest; exit 0;;
+
+    -*) echo Unknown parameter [$@]; exit 1;;
+    *) break;;
+  esac
+  shift
+done
 
 #update and upgrade to the newest releases
 if test "x$CHROOT" = x; then
@@ -229,7 +298,24 @@ else
   apt-get -s -y upgrade | tee -a install.log
 fi
 
-#install the X11 desktop environment
+#install the command line applications
+if test "$CFG_CLI" != ""; then
+  installer $CFG_CLI
+fi
+
+#install vim
+install_vim
+
+# setting the bash
+setup_bash
+
+#############################################################################
+# install the X11 desktop environment
+#############################################################################
+if test "x$CFG_DESKTOP" = "x"; then     # X11 GUI is not required.
+  exit 0
+fi
+
 installer xinit
 case $CFG_DESKTOP in
   lxde) install_desktop_lxde;;
@@ -243,98 +329,38 @@ case $CFG_IME in
     installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
 esac
 
+# install extra chinese fonts and japanese fonts
 if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
   installer fonts-arphic-ukai fonts-arphic-uming
   installer fonts-arphic-gkai00mp fonts-arphic-bkai00mp
   installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
 fi
 
-#install aptitude
-installer aptitude
+#install the Virtualbox or Guest Addition
+case $CFG_VMCN in
+  vbox) install_virtualbox ;;
+  vbgst) install_guest_addition ;;
+  kvm) installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
+esac
 
-#install ifconfig
-installer net-tools
+# install desktop application
+if test "$CFG_GUI" != ""; then
+  installer $CFG_GUI
+fi
 
-#install CIFS to support samba file system
-installer cifs-utils
+#install the additional browsers
+if test "$CFG_WEB" = "firefox-quantum"; then
+  install_firefox_latest
+elif test "$CFG_WEB" != ""; then
+  installer $CFG_WEB
+fi
 
-#install vim
-install_vim
-
-#install the GUI of git
-installer qgit
-
-#install the autoconfig tools
-installer autoconf
-installer libtool
-
-#install s-record for firmware binary process
-installer srecord
-
-#install ffmpeg and libgd
-installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev
-
-#install other tools
-installer arj meld ghex
-installer qbittorrent
-
-#install the browsers
-installer firefox-esr 
-installer chromium
-
-#install image viewers and editors
-installer geeqie imagemagick
-installer gimp
-installer inkscape
-
-#install libre-office
-installer libreoffice 
-
-#install CADs
-installer librecad
-installer freecad
-installer openscad
-installer blender
-
-#install python related. In default the python2 and python3 were all installed.
-# matplotlib requires python-dev
-installer python-pip python-dev python-virtualenv python3-virtualenv
-# install machine learn kit
-installer python2.7-scipy python3-scipy  python-sklearn python2.7-sklearn
 
 #############################################################################
 # Setup the useful scripts
 #############################################################################
-# setting the bash
-echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a install.log
-if test ! -d $CHROOT/etc/skel; then
-  mkdir -p $CHROOT/etc/skel
-fi
-cat >> $CHROOT/etc/skel/.bashrc << BASHRC
-# If not running interactively, don't do anything
-[[ \$- != *i* ]] && return
-
-PS1='\u:\w\\$ '
-
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias grep='grep --color=auto'
-alias l.='ls -d .* --color=auto'
-alias ls='ls --color=auto'
-alias ll='ls -l --color=auto'
-alias path='echo \$PATH'
-alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
-
-ulimit -c unlimited
-
-PATH=\$PATH:\$HOME/bin:.
-
-BASHRC
-
 
 #############################################################################
 # The last part would be adding the default user
 #############################################################################
-echo Install Virtualbox Guest Addition
-install_virtualbox_guest_addition
 
