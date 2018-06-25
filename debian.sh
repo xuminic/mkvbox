@@ -126,9 +126,9 @@ install_desktop_mate()
   installer mate-desktop-environment-extras lightdm
 
   if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    gsettings set org.mate.pluma auto-detected-encodings \
+    logdo gsettings set org.mate.pluma auto-detected-encodings \
       "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-    gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+    logdo gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
   fi
 }
 
@@ -289,6 +289,22 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+mv -f /etc/apt/sources.list /etc/apt/sources.list~
+sed 's/main/main contrib non-free' /etc/apt/sources.list~ > /etc/apt/sources.list
+
+echo -e \\ndeb http://www.deb-multimedia.org stretch main non-free >> /etc/apt/sources.list
+
+echo -e \\ndeb http://dl.google.com/linux/chrome/deb/ stable main >> /etc/apt/sources.list
+echo deb http://dl.google.com/linux/earth/deb/ stable main >> /etc/apt/sources.list
+echo deb http://dl.google.com/linux/talkplugin/deb/ stable main >> /etc/apt/sources.list
+
+echo -e \\ndeb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
+wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
+apt-key add oracle_vbox_2016.asc
+
+add-apt-repository ppa:mozillateam/firefox-next
+
+
 #update and upgrade to the newest releases
 if test "x$CHROOT" = x; then
   apt-get -y update | tee -a install.log
@@ -334,6 +350,8 @@ if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
   installer fonts-arphic-ukai fonts-arphic-uming
   installer fonts-arphic-gkai00mp fonts-arphic-bkai00mp
   installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
+  # this font is for chinese subtitles in VLC
+  logdo 7z x -o/usr/share/fonts DFKai-SB.7z
 fi
 
 #install the Virtualbox or Guest Addition

@@ -400,6 +400,8 @@ esac
 if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
   installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts
   installer horai-ume-*-fonts ipa-*-fonts
+  # this font is for chinese subtitles in VLC
+  logdo 7z x -o /usr/share/fonts  DFKai-SB.7z
 fi
 
 #install the Virtualbox or Guest Addition
