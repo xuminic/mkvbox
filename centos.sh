@@ -11,6 +11,7 @@
 # Notes:
 #  * matplotlib requires python-dev
 #  * gstreamer1-vaapi seems a trouble maker
+#  * Xfce need to be explictly chosen when logining
 #
 # History:
 #
@@ -23,46 +24,48 @@ CFG_DESKTOP=mate	# mate/xfce/cinnamon/gnome
 CFG_VMCN=		# vbox/vbgst/kvm
 CFG_WEB=		# firefox-quantum 
 
-# ifconfig/lspci/samba/... always needed
+#### ifconfig/lspci/samba/... always needed
 CFG_CLI="net-tools wget pciutils cifs-utils arj git"
-# firmware tools
+#### firmware tools
 #CFG_CLI="$CFG_CLI srecord hexedit"				
-# ffmpeg & libgd
-#CFG_CLI="$CFG_CLI libavformat-dev libswscale-dev libx11-dev zlib1g-dev"
-#CFG_CLI="$CFG_CLI libgd2-dev"
-# python basic
-#CFG_CLI="$CFG_CLI python-pip python-dev python-virtualenv python3-virtualenv"
-# python machine learn
-#CFG_CLI="$CFG_CLI python2.7-scipy python3-scipy python-sklearn python2.7-sklearn"
+### ffmpeg & libgd
+#CFG_CLI="$CFG_CLI ffms2-devel gd-devel"
+#### python basic
+#CFG_CLI="$CFG_CLI python2-pip python-devel python-virtualenv"
+#CFG_CLI="$CFG_CLI python34-pip python34-devel python34-virtualenv"
+#### python machine learn
+#CFG_CLI="$CFG_CLI scipy python34-scipy"
 
-# general tools
+#### general tools
 CFG_GUI="vim-gtk qgit meld qbittorrent"
-# old style X fonts
+#### old style X fonts
 #CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
-# chinese fonts and japanese fonts
+#### chinese fonts and japanese fonts
 #CFG_GUI="$CFG_GUI wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts"
 #CFG_GUI="$CFG_GUI horai-ume-*-fonts ipa-*-fonts"
-# browers
+#### browers
 #CFG_GUI="$CFG_GUI firefox chromium google-chrome-stable"
 #CFG_GUI="$CFG_GUI filezilla putty wireshark"
-# Remote Desktop Client
+#### Remote Desktop Client
 #CFG_GUI="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
-# IM: pidgin
+#### IM: pidgin
 #CFG_GUI="$CFG_GUI pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts"
-# image and picture tools
+#### image and picture tools
 #CFG_GUI="$CFG_GUI geeqie gthumb imagemagick gimp inkscape"
-# office suite
+#### office suite
 #CFG_GUI="$CFG_GUI libreoffice"	
-# CAD suites
+#### CAD suites
 #CFG_GUI="$CFG_GUI librecad freecad openscad blender"
-# video player
+#### video player
 #CFG_GUI="$CFG_GUI vlc smplayer"
-# GStreamer codec collection
-#CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base gstreamer-plugins-good \
-#	  gstreamer-plugins-bad gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
+#### GStreamer codec collection
+#CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base \
+#	  gstreamer-plugins-good gstreamer-plugins-bad \
+#	  gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
 #	  gstreamer-plugins-ugly gstreamer-plugins-base-tools \
-#	  gstreamer1 gstreamer1-libav gstreamer1-plugins-base streamer1-plugins-base-tools \
-#	  gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
+#	  gstreamer1 gstreamer1-libav gstreamer1-plugins-base \
+#	  streamer1-plugins-base-tools gstreamer1-plugins-good \
+#	  gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
 #	  gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free
 
 
