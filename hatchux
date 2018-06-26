@@ -193,6 +193,7 @@ Install_Desktop_Xfce()
       Group_Install "Xfce"
       ;;
     DEBIAN)
+      Installer xfce4 xfce4-goodies task-xfce-desktop lightdm
       ;;
   esac
 }
@@ -204,6 +205,7 @@ Install_Desktop_Cinnamon()
       Installer cinnamon lightdm
       ;;
     DEBIAN)
+      Installer cinnamon lightdm
       ;;
   esac
 }
@@ -337,8 +339,8 @@ Install_Firefox_Latest()
 Version=1.0
 Name=Firefox Quantum Web Browser
 Exec=/opt/firefox/firefox %u
-Exec=/opt/firefox/firefox -new-window
-Exec=/opt/firefox/firefox -private-window
+#Exec=/opt/firefox/firefox -new-window
+#Exec=/opt/firefox/firefox -private-window
 Icon=/opt/firefox/browser/chrome/icons/default/default128.png
 Terminal=false
 X-MultipleArgs=false
@@ -369,6 +371,8 @@ Virtualbox_CentOS_Prepare()
 
 Virtualbox_Debian_Prepare()
 {
+  Installer build-essential manpages-dev
+
   LogExec grep virtualbox /etc/apt/sources.list
   if test "x$?" = "x1"; then
     echo -e \\ndeb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
