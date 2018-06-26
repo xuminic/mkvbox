@@ -513,8 +513,8 @@ Repo_Update_Debian()
 {
   echo -e "\\nINSTALLING contrib, non-free and unofficial Repos" | tee -a $CFG_LOG
   LogExec mv -f /etc/apt/sources.list /tmp/sources.list
-  LogExec sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
-  #LogExec rm -f /tmp/sources.list
+  sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
+  LogExec rm -f /tmp/sources.list
 
   echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
   echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
@@ -524,7 +524,7 @@ Repo_Update_Debian()
   echo deb http://dl.google.com/linux/earth/deb/ stable main >> /etc/apt/sources.list
   echo deb http://dl.google.com/linux/talkplugin/deb/ stable main >> /etc/apt/sources.list
 
-  echo -e "\\n# VirtualBox" > /etc/apt/sources.list
+  echo -e "\\n# VirtualBox" >> /etc/apt/sources.list
   echo deb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
   LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
   if test -e oracle_vbox_2016.asc; then
