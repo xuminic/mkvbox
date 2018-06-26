@@ -193,7 +193,7 @@ Install_Desktop_Xfce()
       Group_Install "Xfce"
       ;;
     DEBIAN)
-      Installer xfce4 xfce4-goodies task-xfce-desktop lightdm
+      Installer xfce4 xfce4-goodies lightdm
       ;;
   esac
 }
