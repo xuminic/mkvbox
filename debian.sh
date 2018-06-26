@@ -290,7 +290,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 mv -f /etc/apt/sources.list /etc/apt/sources.list~
-sed 's/main/main contrib non-free' /etc/apt/sources.list~ > /etc/apt/sources.list
+sed 's/main/main contrib non-free/' /etc/apt/sources.list~ > /etc/apt/sources.list
 
 echo -e \\ndeb http://www.deb-multimedia.org stretch main non-free >> /etc/apt/sources.list
 

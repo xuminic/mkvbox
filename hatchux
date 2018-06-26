@@ -1,0 +1,670 @@
+#!/bin/bash
+# Installation:
+#  1. minimem installation with root only 
+#
+# Using the Installer script:
+#  1. install git
+#  2. git clone https://github.com/xuminic/mkvbox.git
+#  3. run 'hatchux'
+#
+# Notes:
+#  * matplotlib requires python-dev
+#  * gstreamer1-vaapi seems a trouble maker
+#  * CENTOS: Xfce need to be explictly chosen when logining
+#
+# Issue:
+#  * MATE was broken by EPEL repo in CentOS 7.
+#    libwebkitgtk was removed so it broke the atril; test repo can fix it.
+#    https://bugzilla.redhat.com/show_bug.cgi?id=1589486
+#  * Virtualbox Guest Addition has problem with CentOS7.5/7.6 Debian 9.
+#    CentOS 7 needs 5.2.x test builds at least
+#    Debian 9 needs 5.2.8 at least
+#
+# History:
+#
+
+#############################################################################
+# Configure
+#############################################################################
+CFG_IME=		# fcitx/ibus
+CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome
+CFG_VMCN=vbgst		# vbox/vbgst/kvm
+CFG_WEB=		# firefox-quantum 
+CFG_LOG=install.log	# define the log file
+CFG_CC=yes              # install C/C++ and binary tools
+
+#############################################################################
+# install command line tools
+#############################################################################
+#### ifconfig/lspci/samba/... always needed
+CFG_CLI="net-tools wget pciutils cifs-utils arj git"
+#### firmware tools
+#CFG_CLI="$CFG_CLI srecord"
+#### development tools
+#CFG_CLI="$CFG_CLI autoconf libtool"
+
+#### general tools
+CFG_CLI_CENTOS="hexedit"
+CFG_CLI_DEBIAN="aptitude"
+### ffmpeg & libgd
+#CFG_CLI_CENTOS="$CFG_CLI_CENTOS ffms2-devel gd-devel"
+#CFG_CLI_DEBIAN="$CFG_CLI_DEBIAN libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"
+#### python basic and science kit
+#### Debian 9 has removed these kits so don't bother
+#CFG_CLI_CENTOS="$CFG_CLI_CENTOS python2-pip python-devel python-virtualenv"
+#CFG_CLI_CENTOS="$CFG_CLI_CENTOS python34-pip python34-devel python34-virtualenv"
+#CFG_CLI_CENTOS="$CFG_CLI_CENTOS scipy python34-scipy"
+
+#############################################################################
+# install X11 GUI tools
+#############################################################################
+#### general tools
+CFG_GUI="vim-gtk qgit meld qbittorrent"
+#### old style X fonts
+#CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
+#### browers
+#CFG_GUI="$CFG_GUI firefox firefox-esr chromium google-chrome-stable"
+#CFG_GUI="$CFG_GUI filezilla putty wireshark"
+#### IM: pidgin
+#CFG_GUI="$CFG_GUI pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts"
+#### image and picture tools
+#CFG_GUI="$CFG_GUI geeqie gthumb imagemagick gimp inkscape"
+#### office suite
+#CFG_GUI="$CFG_GUI libreoffice"	
+#### CAD suites
+#CFG_GUI="$CFG_GUI librecad freecad openscad blender"
+#### video player
+#CFG_GUI="$CFG_GUI vlc smplayer"
+#### GStreamer codec collection
+#CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base \
+#	  gstreamer-plugins-good gstreamer-plugins-bad \
+#	  gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
+#	  gstreamer-plugins-ugly gstreamer-plugins-base-tools \
+#	  gstreamer1 gstreamer1-libav gstreamer1-plugins-base \
+#	  streamer1-plugins-base-tools gstreamer1-plugins-good \
+#	  gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
+#	  gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free
+
+#### chinese fonts and japanese basic fonts
+#CFG_GUI_CENTOS="$CFG_GUI_CENTOS wqy-microhei-fonts wqy-zenhei-fonts"
+#CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN fonts-wqy-microhei fonts-wqy-zenhei"
+#### Remote Desktop Client
+#CFG_GUI="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
+
+#############################################################################
+# Installer with debugger
+#############################################################################
+CHROOT=
+#CHROOT=./tmp
+
+LogExec()
+{
+  echo $@ | tee -a $CFG_LOG
+  if test "x$CHROOT" = x; then
+    eval $@ 2>&1 | tee -a $CFG_LOG
+  fi
+}
+
+System()
+{
+  if test -e /etc/centos-release; then
+    echo "CENTOS"
+  elif test -e /etc/debian_version; then
+    echo "DEBIAN"
+  else
+    echo "UNKNOWN"
+  fi
+}
+
+Installer()
+{
+  if test "x$*" = "x"; then
+    return
+  fi
+  echo -e \\nINSTALLING $* | tee -a $CFG_LOG
+  case $CFG_SYS in
+    CENTOS)
+      LogExec yum -y install "$@"
+      ;;
+    DEBIAN)
+      if test "x$CHROOT" = x; then
+        apt-get -y install "$@" 2>&1 | tee -a $CFG_LOG
+      else
+        apt-get -s -y install "$@" 2>&1 | tee -a $CFG_LOG
+      fi
+      ;;
+  esac
+  if ! test "x$?" = "x0"; then
+    echo Install failed! | tee -a $CFG_LOG
+    exit 1
+  fi
+}
+
+Group_Install()
+{
+  if test "x$*" = "x"; then
+    return
+  fi
+  echo -e \\nINSTALLING "$@" | tee -a $CFG_LOG
+  case $CFG_SYS in
+    CENTOS)
+      LogExec yum -y groupinstall \"$@\"
+      ;;
+    DEBIAN)
+      ;;
+  esac
+  if ! test "x$?" = "x0"; then
+    echo Install failed! | tee -a $CFG_LOG
+    exit 1
+  fi
+}
+
+
+#############################################################################
+# Install packages
+#############################################################################
+Install_Desktop_Mate()
+{
+  case $CFG_SYS in
+    CENTOS)
+      #Installer --enablerepo=epel-testing  atril atril-caja
+      LogExec yum -y --enablerepo=epel-testing install atril atril-caja
+
+      Group_Install "MATE Desktop"
+      Installer caja-share
+      ;;
+    DEBIAN)
+      Installer mate-desktop-environment-extras lightdm
+      ;;
+  esac
+
+  # setting to support Chinese in pluma
+  if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
+    LogExec gsettings set org.mate.pluma auto-detected-encodings \
+       "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
+    LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+  fi
+}
+
+Install_Desktop_Xfce()
+{
+  case $CFG_SYS in
+    CENTOS)
+      Group_Install "Xfce"
+      ;;
+    DEBIAN)
+      ;;
+  esac
+}
+
+Install_Desktop_Cinnamon()
+{
+  case $CFG_SYS in
+    CENTOS)
+      Installer cinnamon lightdm
+      ;;
+    DEBIAN)
+      ;;
+  esac
+}
+
+Install_Desktop_Gnome()
+{
+  case $CFG_SYS in
+    CENTOS)
+      Group_Install "Server with GUI"
+      ;;
+    DEBIAN)
+      ;;
+  esac
+}
+
+Install_Desktop_Lxde()
+{
+  case $CFG_SYS in
+    CENTOS)
+      ;;
+    DEBIAN)
+      Installer lxde leafpad xarchiver
+      ;;
+  esac
+
+  # setting to support Chinese in leafpad
+  if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
+    if test ! -d $CHROOT/usr/bin; then
+      mkdir -p $CHROOT/usr/bin
+    fi
+    if test -e $CHROOT/usr/bin/leafpad; then
+      LogExec mv -f $CHROOT/usr/bin/leafpad $CHROOT/usr/bin/leafpad-gui
+
+      cat > $CHROOT/usr/bin/leafpad << LEAFPAD
+#!/bin/sh
+/usr/bin/leafpad-gui --codeset=gbk \$*
+LEAFPAD
+      chmod 755 $CHROOT/usr/bin/leafpad
+    fi
+  fi
+}
+
+
+Install_VIm()
+{
+  Installer vim
+
+  ### Link vi to vim as default
+  if test -e $CHROOT/usr/bin/vi; then
+    LogExec rm -f $CHROOT/usr/bin/vi
+  fi
+  case $CFG_SYS in
+    CENTOS)
+      if test -e $CHROOT/usr/bin/vim; then
+        LogExec ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
+      fi
+      ;;
+    DEBIAN)
+      if test -e $CHROOT/etc/alternatives/vim; then
+        LogExec ln -s $CHROOT/etc/alternatives/vim $CHROOT/usr/bin/vi						   
+      fi
+      ;;
+  esac
+  
+  ### create a default vim profile
+  if test ! -d $CHROOT/etc/skel; then
+    mkdir -p $CHROOT/etc/skel
+  fi
+  cat >  $CHROOT/etc/skel/.vimrc << VIMRC
+runtime! vimrc_example.vim
+set nobackup
+set noundofile
+set mouse=
+VIMRC
+}
+
+Install_Chinese()
+{
+  echo -e \\nINSTALLING Chinese and Japanese IME package | tee -a $CFG_LOG
+  case $CFG_IME in
+    ibus) #install the Chinese input method: IBus
+      case $CFG_SYS in
+	CENTOS) Installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
+        DEBIAN) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
+      esac ;;
+    fcitx) #install the Chinese input method: Fcitx
+      case $CFG_SYS in
+        CENTOS) Installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
+        DEBIAN) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
+      esac ;;
+    *) echo "INSTALLING Chinese and Japanese Fonts only" | tee -a $CFG_LOG ;;
+  esac
+
+  # this font is for chinese subtitles in VLC
+  LogExec 7z x -o/usr/share/fonts DFKai-SB.7z
+
+  # install extra chinese fonts and japanese fonts
+  case $CFG_SYS in
+    CENTOS) 
+      Installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts
+      Installer horai-ume-*-fonts ipa-*-fonts
+      ;;
+    DEBIAN)
+      Installer fonts-arphic-ukai fonts-arphic-uming fonts-arphic-gkai00mp fonts-arphic-bkai00mp
+      Installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
+      ;;
+  esac
+}
+
+Install_Firefox_Latest()
+{
+  LogExec wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
+
+  local FFOX=firefox-*
+  if test ! -e $FFOX; then
+    echo ERROR: firefox not downloaded! | tee -a $CFG_LOG
+    exit
+  fi
+
+  LogExec tar xfj $FFOX -C /opt 
+  LogExec rm -f $FFOX
+
+  if test -L /usr/bin/firefox; then	# firefox has already been linked out
+    echo Firefox updated. | tee -a $CFG_LOG
+  elif test -e /usr/bin/firefox; then
+    LogExec mv -f /usr/bin/firefox /usr/bin/firefox-52
+    LogExec ln -s /opt/firefox/firefox /usr/bin/firefox
+  else
+    cat >  $CHROOT/usr/share/applications/firefox.desktop << FIREFOX
+[Desktop Entry]
+Version=1.0
+Name=Firefox Quantum Web Browser
+Exec=/opt/firefox/firefox %u
+Exec=/opt/firefox/firefox -new-window
+Exec=/opt/firefox/firefox -private-window
+Icon=/opt/firefox/browser/chrome/icons/default/default128.png
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;text/mml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+StartupWMClass=Firefox
+Categories=Network;WebBrowser;
+X-Desktop-File-Install-Version=0.23
+FIREFOX
+  fi
+}
+
+
+Virtualbox_CentOS_Prepare()
+{
+  Group_Install "Development Tools"
+  Installer kernel-devel dkms wget
+
+  if test ! -e /etc/yum.repos.d/virtualbox.repo; then
+    LogExec wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
+    if test -e virtualbox.repo; then
+      LogExec mv -f virtualbox.repo /etc/yum.repos.d
+      LogExec yum -y update
+    fi
+  fi
+}
+
+Virtualbox_Debian_Prepare()
+{
+  LogExec grep virtualbox /etc/apt/sources.list
+  if test "x$?" = "x1"; then
+    echo -e \\ndeb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
+    LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
+    LogExec apt-key add oracle_vbox_2016.asc
+    LogExec apt-get -y update
+  fi
+}
+
+Install_Virtualbox()
+{
+  local DEFUSER=$(/bin/ls /home)
+  
+  case $CFG_SYS in
+    CENTOS) Virtualbox_CentOS_Prepare ;;
+    DEBIAN) Virtualbox_Debian_Prepare ;;
+  esac
+
+  Installer VirtualBox-5.2
+  if test "$DEFUSER" != ""; then
+    LogExec usermod -a -G vboxusers $DEFUSER
+  fi
+}
+
+Install_VBGuest_Addition()
+{
+  # FIXED: Most guest addition has problem with CentOS7.5/7.6. Only 5.2.x test builds work.
+  # https://forums.virtualbox.org/viewtopic.php?f=3&t=87529
+  local DEFUSER=$(/bin/ls /home)
+
+  #install GNU GCC Compiler, kernel module and Development Environment
+  case $CFG_SYS in
+    CENTOS) 
+      Group_Install "Development Tools"
+      Installer kernel-devel dkms
+      ;;
+    DEBIAN) 
+      Installer build-essential manpages-dev linux-headers-$(uname -r)
+      ;;
+  esac
+
+  # try CDROM firstly for best matching the virtualbox host
+  LogExec mount /dev/sr0 /mnt
+  if test -e /mnt/VBoxLinuxAdditions.run; then
+    LogExec cp -f /mnt/VBoxLinuxAdditions.run /root
+  fi
+  LogExec umount /mnt
+
+  # Fix the error while Building the OpenGL support module in CentOS 6
+#  cd /usr/src/kernels/$(uname -r)/include/drm 
+#  if test ! -e drm.h; then
+#    ln -s /usr/include/drm/drm.h drm.h  
+#    ln -s /usr/include/drm/drm_sarea.h drm_sarea.h  
+#    ln -s /usr/include/drm/drm_mode.h drm_mode.h  
+#    ln -s /usr/include/drm/drm_fourcc.h drm_fourcc.h
+#  fi
+#  ls -l /usr/src/kernels/$(uname -r)/include/drm/drm.h | tee -a $CFG_LOG
+
+  if test -e /root/VBoxLinuxAdditions.run; then
+    echo -e \\nINSTALLING Virtualbox Guest Addition | tee -a $CFG_LOG
+    LogExec chmod 755 /root/VBoxLinuxAdditions.run
+    LogExec /root/VBoxLinuxAdditions.run
+
+    if test "x$?" = "x0" -a "x$DEFUSER" != "x"; then
+      LogExec usermod -a -G vboxsf $DEFUSER
+    fi
+  fi
+}
+
+Setup_Bash()
+{
+  echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a $CFG_LOG
+  if test ! -d $CHROOT/etc/skel; then
+    mkdir -p $CHROOT/etc/skel
+  fi
+  cat >> $CHROOT/etc/skel/.bashrc << BASHRC
+# If not running interactively, don't do anything
+[[ \$- != *i* ]] && return
+
+PS1='\u:\w\\$ '
+
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias grep='grep --color=auto'
+alias l.='ls -d .* --color=auto'
+alias ls='ls --color=auto'
+alias ll='ls -l --color=auto'
+alias path='echo \$PATH'
+alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
+
+ulimit -c unlimited
+
+PATH="\$PATH:\$HOME/bin:." 
+
+BASHRC
+}
+
+Repo_Update_CentOS()
+{
+  echo -e "\\nINSTALLING extra and unofficial Repos" | tee -a $CFG_LOG
+
+  #install extra repos
+  Installer epel-release
+
+  #install Nux Dextop
+  LogExec rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
+
+  #install RPM Fusion
+  LogExec rpm -Uvh https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
+  LogExec rpm -Uvh https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
+
+  #install google repos
+  cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLREPO
+[google]
+name=Google - \$basearch
+baseurl=http://dl.google.com/linux/rpm/stable/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+[google-chrome]
+name=google-chrome
+baseurl=http://dl.google.com/linux/chrome/rpm/stable/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+[google-earth]
+name=google-earth
+baseurl=http://dl.google.com/linux/earth/rpm/stable/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+GGLREPO
+
+  #update and upgrade to the newest releases
+  LogExec yum -y update
+}
+
+Repo_Update_Debian()
+{
+  echo -e "\\nINSTALLING contrib, non-free and unofficial Repos" | tee -a $CFG_LOG
+  LogExec mv -f /etc/apt/sources.list /tmp/sources.list
+  LogExec sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
+  #LogExec rm -f /tmp/sources.list
+
+  echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
+  echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
+
+  echo -e "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> /etc/apt/sources.list
+  echo deb http://dl.google.com/linux/chrome/deb/ stable main >> /etc/apt/sources.list
+  echo deb http://dl.google.com/linux/earth/deb/ stable main >> /etc/apt/sources.list
+  echo deb http://dl.google.com/linux/talkplugin/deb/ stable main >> /etc/apt/sources.list
+
+  echo -e "\\n# VirtualBox" > /etc/apt/sources.list
+  echo deb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
+  LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
+  if test -e oracle_vbox_2016.asc; then
+    LogExec apt-key add oracle_vbox_2016.asc
+  fi
+
+  #update and upgrade to the newest releases
+  LogExec apt-get -y update 
+  LogExec apt-get -y upgrade
+}
+
+
+#############################################################################
+# Install starting
+#############################################################################
+usage_exit()
+{
+  cat << my_usage
+$0 [OPTION]
+OPTION:
+  -d, --desktop     choose desktop [mate/xfce/cinnamon/gnome]
+  -i, --ime         choose IME input method [ibus/fcitx]
+  -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
+      --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
+      --vboxhost    quick install Virtualbox machine
+      --firefox     install the latest firefox quantum
+
+my_usage
+  exit 0
+}
+
+
+CFG_SYS=$(System)
+echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage_exit;;
+    -d|--desktop) CFG_DESKTOP="$2"; shift;;
+    -i|--ime) CFG_IME="$2"; shift;;
+    -v|--vm) CFG_VMCN="$2"; shift;;
+    --vboxguest) Install_VBGuest_Addition; exit 0;;
+    --vboxhost) Install_Virtualbox; exit 0;;
+    --firefox) Install_Firefox_Latest; exit 0;;
+
+    -*) echo Unknown parameter [$@]; exit 1;;
+    *) break;;
+  esac
+  shift
+done
+
+case $CFG_SYS in
+  CENTOS) Repo_Update_CentOS ;;
+  DEBIAN) Repo_Update_Debian ;;
+
+  *) echo UNKNOWN OS SYSTEM! | tee -a $CFG_LOG
+     exit 2;;
+esac
+
+#install vim
+Install_VIm
+
+#install the C/C++ tool chains
+if test "$CFG_CC" = "yes"; then
+  case $CFG_SYS in
+    CENTOS) Group_Install "Development Tools" ;;
+    DEBIAN) Installer build-essential manpages-dev ;;
+  esac
+fi
+
+#install the command line applications
+Installer $CFG_CLI
+case $CFG_SYS in
+  CENTOS) Installer $CFG_CLI_CENTOS ;;
+  DEBIAN) Installer $CFG_CLI_DEBIAN ;;
+esac
+
+# setting the bash
+Setup_Bash
+
+#############################################################################
+# install the X11 desktop environment
+#############################################################################
+if test "x$CFG_DESKTOP" = "x"; then	# X11 GUI is not required.
+  exit 0
+fi
+
+case $CFG_SYS in
+  CENTOS) Group_Install "X Window system" ;;
+  DEBIAN) Installer xinit ;;
+esac
+case $CFG_DESKTOP in
+  mate) Install_Desktop_Mate ;;
+  xfce) Install_Desktop_Xfce ;;
+  lxde) Install_Desktop_Lxde ;;
+  cinnamon) Install_Desktop_Cinnamon ;;
+  gnome|*) Install_Desktop_Gnome ;;
+esac
+
+# set runlevel to gui
+#systemctl isolate graphical.target
+case $CFG_SYS in
+  CENTOS) LogExec systemctl set-default graphical.target ;;
+esac
+
+# install extra chinese fonts and japanese fonts
+if test ! "x$CFG_IME" = "x"; then
+  Install_Chinese
+fi
+
+#install the Virtualbox or Guest Addition
+case $CFG_VMCN in
+  vbox) Install_Virtualbox ;;
+  vbgst) Install_VBGuest_Addition ;;
+  kvm) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
+esac
+
+# install desktop application
+Installer $CFG_GUI
+case $CFG_SYS in
+  CENTOS) Installer $CFG_GUI_CENTOS ;;
+  DEBIAN) Installer $CFG_GUI_DEBIAN ;;
+esac
+
+#install the additional browsers
+if test "$CFG_WEB" = "firefox-quantum"; then
+  Install_Firefox_Latest
+elif test "$CFG_WEB" != ""; then
+  Installer $CFG_WEB
+fi
+
+#############################################################################
+# Setup Extra repos
+# ELRepo breaks X Window system so it must be postponed
+#############################################################################
+#install ELRepo
+#LogExec rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+#LogExec rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+
+#############################################################################
+# Setup the useful scripts
+#############################################################################
+
