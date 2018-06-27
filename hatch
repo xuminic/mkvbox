@@ -5,7 +5,7 @@
 # Using the Installer script:
 #  1. install git
 #  2. git clone https://github.com/xuminic/mkvbox.git
-#  3. run 'hatchux'
+#  3. run 'hatch'
 #
 # Notes:
 #  * matplotlib requires python-dev
@@ -523,6 +523,7 @@ Repo_Update_Debian()
   echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
   #echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
   echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> /etc/apt/sources.list
+  LogExec apt-get update
   LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
   if ! test "x$?" = "x0"; then
     # the backup plan for deb-multimedia keyring
@@ -557,7 +558,7 @@ Repo_Update_Debian()
   fi
 
   #update and upgrade to the newest releases
-  LogExec apt-get -y update 
+  LogExec apt-get update 
   if ! test "x$?" = "x0"; then
     exit $?
   fi
