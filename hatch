@@ -217,6 +217,7 @@ Install_Desktop_Gnome()
       Group_Install "Server with GUI"
       ;;
     DEBIAN)
+      Installer gnome
       ;;
   esac
 }
@@ -225,6 +226,8 @@ Install_Desktop_Lxde()
 {
   case $CFG_SYS in
     CENTOS)
+      echo -e \\nINSTALLING Xfce instead of LXDE in CentOS 7 | tee -a $CFG_LOG
+      Group_Install "Xfce"
       ;;
     DEBIAN)
       Installer lxde leafpad xarchiver
