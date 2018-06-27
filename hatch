@@ -521,12 +521,25 @@ Repo_Update_Debian()
   LogExec rm -f /tmp/sources.list
 
   echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
-  echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
+  #echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
+  echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> /etc/apt/sources.list
+  LogExec apt-get update -oAcquire::AllowInsecureRepositories=true
+  LogExec apt-get install deb-multimedia-keyring -oAcquire::AllowInsecureRepositories=true
+
+  # the backup plan for deb-multimedia keyring
+  #LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/deb-multimedia-keyring_2016.8.1_all.deb
+  #if test -e deb-multimedia-keyring_2016.8.1_all.deb; then
+  #  LogExec dpkg -i deb-multimedia-keyring_2016.8.1_all.deb
+  #fi
 
   echo -e "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> /etc/apt/sources.list
   echo deb http://dl.google.com/linux/chrome/deb/ stable main >> /etc/apt/sources.list
   echo deb http://dl.google.com/linux/earth/deb/ stable main >> /etc/apt/sources.list
   echo deb http://dl.google.com/linux/talkplugin/deb/ stable main >> /etc/apt/sources.list
+  LogExec wget https://dl.google.com/linux/linux_signing_key.pub
+  if test -e linux_signing_key.pub; then
+    apt-key add linux_signing_key.pub
+  fi
 
   echo -e "\\n# VirtualBox" >> /etc/apt/sources.list
   echo deb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
