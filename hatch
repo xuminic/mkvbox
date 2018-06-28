@@ -2,6 +2,49 @@
 # Installation:
 #  1. minimem installation with root only 
 #
+# ARCHLINUX Installation:
+#  1. fdisk /dev/sda
+#  2. mkfs.ext4 /dev/sda1
+#  3. mount /dev/sda1 /mnt
+#  4. vi /etc/pacman.d/mirrorlist
+#  5. pacstrap /mnt base
+#  6. genfstab -U /mnt >> /mnt/etc/fstab
+#  7. arch-chroot /mnt
+#  8. ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
+#  9. hwclock --systohc
+# 10. vi /etc/locale.gen
+#     en_US.UTF8 UTF-8
+#     zh_CN.UTF8 UTF-8
+#     zh_CN.GBK GBK
+#     zh_CN.GB2312 GB2312
+#     zh_CN.GB18030 GB18030
+# 11. locale-gen
+# 12. vi /etc/locale.conf
+#     LANG=en_US.UTF-8
+# 13. echo myarchlinux > /etc/hostname
+# 14. echo "127.0.1.1	myarchlinux.localdomain	myarchlinux" >> /etc/hosts
+# 15. cp /etc/netctl/examples/ethernet-dhcp /etc/netctl/
+# 16. vi /etc/netctl/ethernet-dhcp
+#     Interface=enp0s3
+# 17. netctl enable ethernet-dhcp
+# 18. passwd root
+# 19. pacman -S grub
+# 20. grub-install --target=i386-pc /dev/sda
+# 21. grub-mkconfig -o /boot/grub/grub.cfg
+#
+# 22. pacman -S sudo
+# 23. "vi /etc/sudoer" or visudo   --> "%wheel    ALL=(ALL) ALL"
+#
+# 24. pacman -S git
+# 25. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
+# 26. chmod 755 installer.sh
+#
+# 27. In Virtualbox manager, Insert Guest Additions 5.1.x than lower version
+# 29. mount /dev/sr0 /mnt
+# 30. cp /mnt/VBoxLinuxAdditions.run ~
+# 31. umount /mnt
+# 32. Shutdown the Virtualbox Image and you may ZIP it for future using.
+#
 # Using the Installer script:
 #  1. install git
 #  2. git clone https://github.com/xuminic/mkvbox.git
@@ -20,6 +63,9 @@
 #    CentOS 7 needs 5.2.x test builds at least
 #    Debian 9 needs 5.2.8 at least
 #
+# FIXME:
+#  * Debian should check key before download the repo key.
+#
 # History:
 #
 
@@ -37,11 +83,11 @@ CFG_CC=yes              # install C/C++ and binary tools
 # install command line tools
 #############################################################################
 #### ifconfig/lspci/samba/... always needed
-CFG_CLI="net-tools wget pciutils cifs-utils arj git"
+CFG_CLI="net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio openssh"
 #### firmware tools
 #CFG_CLI="$CFG_CLI srecord"
 #### development tools
-#CFG_CLI="$CFG_CLI autoconf libtool"
+#CFG_CLI="$CFG_CLI autoconf libtooli gdb"
 
 #### general tools
 CFG_CLI_CENTOS="hexedit"
@@ -49,19 +95,29 @@ CFG_CLI_DEBIAN="aptitude"
 ### ffmpeg & libgd
 #CFG_CLI_CENTOS="$CFG_CLI_CENTOS ffms2-devel gd-devel"
 #CFG_CLI_DEBIAN="$CFG_CLI_DEBIAN libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"
+#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX ffmpeg gd"
+####install SDL and freeimage
+#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX sdl2 freeimage lsb_release"
 #### python basic and science kit
 #### Debian 9 has removed these kits so don't bother
 #CFG_CLI_CENTOS="$CFG_CLI_CENTOS python2-pip python-devel python-virtualenv"
 #CFG_CLI_CENTOS="$CFG_CLI_CENTOS python34-pip python34-devel python34-virtualenv"
 #CFG_CLI_CENTOS="$CFG_CLI_CENTOS scipy python34-scipy"
+#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX python-pip python2-pip python-virtualenv python2-virtualenv"
+#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX python-scipy python2-scipy python-scikit-learn python2-scikit-learn"
+#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX python-matplotlib python2-matplotlib"
 
 #############################################################################
 # install X11 GUI tools
 #############################################################################
-#### general tools
-CFG_GUI="vim-gtk qgit meld qbittorrent"
 #### old style X fonts
+CFG_GUI="qgit meld qbittorrent"
 #CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
+
+#### general tools
+CFG_GUI_CENTOS="vim-X11"
+CFG_GUI_DEBIAN="vim-gtk"
+CFG_GUI_ARCHLINUX="gvim evince" 
 #### browers
 #CFG_GUI="$CFG_GUI firefox firefox-esr chromium google-chrome-stable"
 #CFG_GUI="$CFG_GUI filezilla putty wireshark"
@@ -69,8 +125,6 @@ CFG_GUI="vim-gtk qgit meld qbittorrent"
 #CFG_GUI="$CFG_GUI pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts"
 #### image and picture tools
 #CFG_GUI="$CFG_GUI geeqie gthumb imagemagick gimp inkscape"
-#### office suite
-#CFG_GUI="$CFG_GUI libreoffice"	
 #### CAD suites
 #CFG_GUI="$CFG_GUI librecad freecad openscad blender"
 #### video player
@@ -85,9 +139,14 @@ CFG_GUI="vim-gtk qgit meld qbittorrent"
 #	  gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
 #	  gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free
 
+#### office suite
+#CFG_GUI_CENTOS="$CFG_GUI_CENTOS libreoffice"	
+#CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN libreoffice"
+#CFG_GUI_ARCHLINUX="$CFG_GUI_ARCHLINUX libreoffice-fresh"
 #### chinese fonts and japanese basic fonts
 #CFG_GUI_CENTOS="$CFG_GUI_CENTOS wqy-microhei-fonts wqy-zenhei-fonts"
 #CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN fonts-wqy-microhei fonts-wqy-zenhei"
+#CFG_GUI_ARCHLINUX="$CFG_GUI_ARCHLINUX wqy-zenhei wqy-microhei-lite"
 #### Remote Desktop Client
 #CFG_GUI="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
 
@@ -111,6 +170,8 @@ System()
     echo "CENTOS"
   elif test -e /etc/debian_version; then
     echo "DEBIAN"
+  elif test -e /etc/arch-release; then
+    echo "ARCHLINUX"
   else
     echo "UNKNOWN"
   fi
@@ -133,6 +194,9 @@ Installer()
         apt-get -s -y install "$@" 2>&1 | tee -a $CFG_LOG
       fi
       ;;
+    ARCHLINUX)
+      LogExec pacman -S --noconfirm --needed "$@"
+      ;;
   esac
   if ! test "x$?" = "x0"; then
     echo Install failed! | tee -a $CFG_LOG
@@ -140,6 +204,7 @@ Installer()
   fi
 }
 
+# Used in CentOS
 Group_Install()
 {
   if test "x$*" = "x"; then
@@ -159,6 +224,38 @@ Group_Install()
   fi
 }
 
+# Used in ArchLinux
+# add_users $ADDUSER $ADDPWD
+add_users()
+{
+  echo useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1" | tee -a $CFG_LOG
+  if test "x$CHROOT" = x; then
+    useradd -m -G audio,lp,optical,storage,video,wheel,vboxsf -s /bin/bash "$1" | tee -a $CFG_LOG
+    echo "$1":"$2" | chpasswd
+    sudo -u "$1" mkdir "/home/$1/bin"
+  else          # debug mode
+    echo "$1":"$2"  | tee -a $CFG_LOG
+    echo sudo -u "$1" mkdir "/home/$1/bin" | tee -a $CFG_LOG
+  fi
+
+  echo Autologin the first console as the default user [$ADDUSER].
+  mkdir -p "$CHROOT/etc/systemd/system/getty@tty1.service.d"
+  cat > "$CHROOT/etc/systemd/system/getty@tty1.service.d/autologin.conf" << AUTOLOGIN
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $ADDUSER --noclear %I \$TERM
+AUTOLOGIN
+
+  #auto start X desktop as the default user so no xDM needed
+  echo Auto-start the X desktop | tee -a $CFG_LOG
+  cat > $CHROOT/etc/skel/.bash_profile << AUTOX11
+if [ -z "\$DISPLAY" ] && [ -n "\$XDG_VTNR" ] && [ "\$XDG_VTNR" -eq 1 ]; then
+  exec startx
+fi
+AUTOX11
+
+}
+
 
 #############################################################################
 # Install packages
@@ -176,13 +273,18 @@ Install_Desktop_Mate()
     DEBIAN)
       Installer mate-desktop-environment-extras lightdm
       ;;
+    ARCHLINUX)
+      Installer mate mate-extra lightdm
+      #echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
   esac
 
   # setting to support Chinese in pluma
   if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    LogExec gsettings set org.mate.pluma auto-detected-encodings \
-       "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-    LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+    if test -e $CHROOT/usr/bin/pluma; then
+      LogExec gsettings set org.mate.pluma auto-detected-encodings \
+         "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
+      LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+    fi
   fi
 }
 
@@ -232,13 +334,14 @@ Install_Desktop_Lxde()
     DEBIAN)
       Installer lxde leafpad xarchiver
       ;;
+    ARCHLINUX)
+      Installer lxde leafpad xarchiver
+      #echo "exec startlxde" > $CHROOT/etc/skel/.xinitrc
+      ;;
   esac
 
   # setting to support Chinese in leafpad
   if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    if test ! -d $CHROOT/usr/bin; then
-      mkdir -p $CHROOT/usr/bin
-    fi
     if test -e $CHROOT/usr/bin/leafpad; then
       LogExec mv -f $CHROOT/usr/bin/leafpad $CHROOT/usr/bin/leafpad-gui
 
@@ -261,7 +364,7 @@ Install_VIm()
     LogExec rm -f $CHROOT/usr/bin/vi
   fi
   case $CFG_SYS in
-    CENTOS)
+    CENTOS|ARCHLINUX)
       if test -e $CHROOT/usr/bin/vim; then
         LogExec ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
       fi
@@ -274,9 +377,6 @@ Install_VIm()
   esac
   
   ### create a default vim profile
-  if test ! -d $CHROOT/etc/skel; then
-    mkdir -p $CHROOT/etc/skel
-  fi
   cat >  $CHROOT/etc/skel/.vimrc << VIMRC
 runtime! vimrc_example.vim
 set nobackup
@@ -293,11 +393,13 @@ Install_Chinese()
       case $CFG_SYS in
 	CENTOS) Installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
         DEBIAN) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
+	ARCHLINUX) Installer ibus ibus-qt ibus-libpinyin ibus-googlepinyin ibus-anthy ;;
       esac ;;
     fcitx) #install the Chinese input method: Fcitx
       case $CFG_SYS in
         CENTOS) Installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
         DEBIAN) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
+	ARCHLINUX) Installer fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc ;;
       esac ;;
     *) echo "INSTALLING Chinese and Japanese Fonts only" | tee -a $CFG_LOG ;;
   esac
@@ -314,6 +416,14 @@ Install_Chinese()
     DEBIAN)
       Installer fonts-arphic-ukai fonts-arphic-uming fonts-arphic-gkai00mp fonts-arphic-bkai00mp
       Installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
+      ;;
+    ARCHLINUX)
+      Installer wqy-bitmapfont wqy-microhei
+      Installer ttf-arphic-ukai ttf-arphic-uming opendesktop-fonts
+      Installer adobe-source-han-sans-cn-fonts adobe-source-han-serif-cn-fonts
+      Installer adobe-source-han-sans-tw-fonts adobe-source-han-serif-tw-fonts
+      Installer adobe-source-han-sans-jp-fonts adobe-source-han-serif-jp-fonts
+      Installer otf-ipafont ttf-hanazono  ttf-sazanami ttf-baekmuk
       ;;
   esac
 }
@@ -358,43 +468,48 @@ FIREFOX
 }
 
 
-Virtualbox_CentOS_Prepare()
-{
-  Group_Install "Development Tools"
-  Installer kernel-devel dkms wget
-
-  if test ! -e /etc/yum.repos.d/virtualbox.repo; then
-    LogExec wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
-    if test -e virtualbox.repo; then
-      LogExec mv -f virtualbox.repo /etc/yum.repos.d
-      LogExec yum -y update
-    fi
-  fi
-}
-
-Virtualbox_Debian_Prepare()
-{
-  Installer build-essential manpages-dev
-
-  LogExec grep virtualbox /etc/apt/sources.list
-  if test "x$?" = "x1"; then
-    echo -e \\ndeb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
-    LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
-    LogExec apt-key add oracle_vbox_2016.asc
-    LogExec apt-get -y update
-  fi
-}
-
 Install_Virtualbox()
 {
   local DEFUSER=$(/bin/ls /home)
   
   case $CFG_SYS in
-    CENTOS) Virtualbox_CentOS_Prepare ;;
-    DEBIAN) Virtualbox_Debian_Prepare ;;
+    CENTOS) 
+      Group_Install "Development Tools"
+      Installer kernel-devel dkms wget
+
+      if test ! -e /etc/yum.repos.d/virtualbox.repo; then
+        LogExec wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
+        if test -e virtualbox.repo; then
+          LogExec mv -f virtualbox.repo /etc/yum.repos.d
+          LogExec yum -y update
+        fi
+      fi 
+      Installer VirtualBox-5.2
+      ;;
+    DEBIAN)
+      Installer build-essential manpages-dev
+
+      LogExec grep virtualbox /etc/apt/sources.list
+      if test "x$?" != "x0"; then
+        echo -e \\ndeb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
+	if test ! -e oracle_vbox_2016.asc; then
+          LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
+        fi
+	if test -e oracle_vbox_2016.asc; then
+          LogExec apt-key add oracle_vbox_2016.asc
+	fi
+        LogExec apt-get -y update
+      fi
+      Installer VirtualBox-5.2
+      ;;
+    ARCHLINUX) 
+      # Archlinux can use Community Repo
+      Installer virtualbox virtualbox-host-modules-arch virtualbox-guest-iso
+      # manual load the kernel modules
+      #modprobe vboxdrv vboxnetadp vboxnetflt vboxpci
+      ;;
   esac
 
-  Installer VirtualBox-5.2
   if test "$DEFUSER" != ""; then
     LogExec usermod -a -G vboxusers $DEFUSER
   fi
@@ -414,6 +529,15 @@ Install_VBGuest_Addition()
       ;;
     DEBIAN) 
       Installer build-essential manpages-dev linux-headers-$(uname -r)
+      ;;
+    ARCHLINUX) 
+      # Archlinux can use Community Repo
+      Installer virtualbox-guest-utils virtualbox-guest-modules-arch
+      # for non-default kernels choose virtualbox-guest-dkms
+      #Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
+      # To recompile the vbox kernel modules, run rcvboxdrv as root.
+      LogExec usermod -a -G vboxsf $DEFUSER
+      return
       ;;
   esac
 
@@ -448,9 +572,6 @@ Install_VBGuest_Addition()
 Setup_Bash()
 {
   echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a $CFG_LOG
-  if test ! -d $CHROOT/etc/skel; then
-    mkdir -p $CHROOT/etc/skel
-  fi
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
@@ -571,6 +692,11 @@ Repo_Update_Debian()
   fi
 }
 
+Repo_Update_Archlinux()
+{
+  Installer -yu
+  Installer -c
+}
 
 #############################################################################
 # Install starting
@@ -595,6 +721,12 @@ my_usage
 CFG_SYS=$(System)
 echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
 
+# once for all in dry-run mode
+if test ! -d $CHROOT/etc/skel; then
+  mkdir -p $CHROOT/etc/skel
+  mkdir -p $CHROOT/usr/bin
+fi
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -h|--help) usage_exit;;
@@ -614,6 +746,7 @@ done
 case $CFG_SYS in
   CENTOS) Repo_Update_CentOS ;;
   DEBIAN) Repo_Update_Debian ;;
+  ARCHLUNUX) Repo_Update_Archlinux ;;
 
   *) echo UNKNOWN OS SYSTEM! | tee -a $CFG_LOG
      exit 2;;
@@ -627,6 +760,7 @@ if test "$CFG_CC" = "yes"; then
   case $CFG_SYS in
     CENTOS) Group_Install "Development Tools" ;;
     DEBIAN) Installer build-essential manpages-dev ;;
+    ARCHLUNUX) Installer base-devel ;;
   esac
 fi
 
@@ -635,10 +769,20 @@ Installer $CFG_CLI
 case $CFG_SYS in
   CENTOS) Installer $CFG_CLI_CENTOS ;;
   DEBIAN) Installer $CFG_CLI_DEBIAN ;;
+  ARCHLUNUX) 
+    Installer $CFG_CLI_ARCHLUNUX
+    # set up time and date
+    echo Initial Network Time Control | tee -a $CFG_LOG
+    LogExec timedatectl set-ntp true
+    ;;
 esac
 
 # setting the bash
 Setup_Bash
+
+echo Enable the coredump in sysctl | tee -a $CFG_LOG
+LogExec sysctl -w kernel.core_pattern="core"
+
 
 #############################################################################
 # install the X11 desktop environment
@@ -650,6 +794,7 @@ fi
 case $CFG_SYS in
   CENTOS) Group_Install "X Window system" ;;
   DEBIAN) Installer xinit ;;
+  ARCHLINUX) Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera ;;
 esac
 case $CFG_DESKTOP in
   mate) Install_Desktop_Mate ;;
