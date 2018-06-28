@@ -117,7 +117,7 @@ CFG_GUI="qgit meld qbittorrent"
 #### general tools
 CFG_GUI_CENTOS="vim-X11"
 CFG_GUI_DEBIAN="vim-gtk"
-CFG_GUI_ARCHLINUX="gvim evince" 
+CFG_GUI_ARCHLINUX="gvim" 
 #### browers
 #CFG_GUI="$CFG_GUI firefox firefox-esr chromium google-chrome-stable"
 #CFG_GUI="$CFG_GUI filezilla putty wireshark"
@@ -169,7 +169,12 @@ System()
   if test -e /etc/centos-release; then
     echo "CENTOS"
   elif test -e /etc/debian_version; then
-    echo "DEBIAN"
+    grep Ubuntu /etc/os-release
+    if test "x$?" = "x0"; then
+      echo "UBUNTU"
+    else
+      echo "DEBIAN"
+    fi
   elif test -e /etc/arch-release; then
     echo "ARCHLINUX"
   else
@@ -717,6 +722,16 @@ my_usage
   exit 0
 }
 
+report_exit()
+{
+  case $CFG_SYS in
+    CENTOS) grep "Error:" $CFG_LOG ;;
+    DEBIAN) grep -e "E:" -e "W:"  $CFG_LOG ;; 
+    ARCHLINUX) grep -e "warning:" -e "error:" $CFG_LOG ;;
+  esac
+  exit $1
+}
+
 
 CFG_SYS=$(System)
 echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
@@ -746,7 +761,7 @@ done
 case $CFG_SYS in
   CENTOS) Repo_Update_CentOS ;;
   DEBIAN) Repo_Update_Debian ;;
-  ARCHLUNUX) Repo_Update_Archlinux ;;
+  ARCHLINUX) Repo_Update_Archlinux ;;
 
   *) echo UNKNOWN OS SYSTEM! | tee -a $CFG_LOG
      exit 2;;
@@ -760,7 +775,7 @@ if test "$CFG_CC" = "yes"; then
   case $CFG_SYS in
     CENTOS) Group_Install "Development Tools" ;;
     DEBIAN) Installer build-essential manpages-dev ;;
-    ARCHLUNUX) Installer base-devel ;;
+    ARCHLINUX) Installer base-devel ;;
   esac
 fi
 
@@ -769,8 +784,8 @@ Installer $CFG_CLI
 case $CFG_SYS in
   CENTOS) Installer $CFG_CLI_CENTOS ;;
   DEBIAN) Installer $CFG_CLI_DEBIAN ;;
-  ARCHLUNUX) 
-    Installer $CFG_CLI_ARCHLUNUX
+  ARCHLINUX) 
+    Installer $CFG_CLI_ARCHLINUX
     # set up time and date
     echo Initial Network Time Control | tee -a $CFG_LOG
     LogExec timedatectl set-ntp true
@@ -788,7 +803,7 @@ LogExec sysctl -w kernel.core_pattern="core"
 # install the X11 desktop environment
 #############################################################################
 if test "x$CFG_DESKTOP" = "x"; then	# X11 GUI is not required.
-  exit 0
+  report_exit 0
 fi
 
 case $CFG_SYS in
@@ -847,4 +862,4 @@ fi
 #############################################################################
 # Setup the useful scripts
 #############################################################################
-
+report_exit 0
