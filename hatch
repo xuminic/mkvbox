@@ -279,8 +279,8 @@ Install_Desktop_Mate()
       Installer mate-desktop-environment-extras lightdm
       ;;
     ARCHLINUX)
-      Installer mate mate-extra lightdm
-      #echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
+      Installer mate mate-extra 
+      echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
   esac
 
   # setting to support Chinese in pluma
@@ -341,7 +341,7 @@ Install_Desktop_Lxde()
       ;;
     ARCHLINUX)
       Installer lxde leafpad xarchiver
-      #echo "exec startlxde" > $CHROOT/etc/skel/.xinitrc
+      echo "exec startlxde" > $CHROOT/etc/skel/.xinitrc
       ;;
   esac
 
@@ -809,7 +809,14 @@ fi
 case $CFG_SYS in
   CENTOS) Group_Install "X Window system" ;;
   DEBIAN) Installer xinit ;;
-  ARCHLINUX) Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera ;;
+  ARCHLINUX) 
+    Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera 
+    # install and config the lightdm
+    Installer lightdm lightdm-gtk-greeter
+    LogExec mv -f /etc/lightdm/lightdm.conf /tmp/lightdm.conf
+    sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' /tmp/lightdm.conf > /etc/lightdm/lightdm.conf
+    LogExec rm -f /tmp/lightdm.conf
+    ;;
 esac
 case $CFG_DESKTOP in
   mate) Install_Desktop_Mate ;;
@@ -823,6 +830,7 @@ esac
 #systemctl isolate graphical.target
 case $CFG_SYS in
   CENTOS) LogExec systemctl set-default graphical.target ;;
+  ARCHLINUX) LogExec systemctl enable lightdm.service ;;
 esac
 
 # install extra chinese fonts and japanese fonts
