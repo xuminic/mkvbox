@@ -73,7 +73,7 @@
 # Configure
 #############################################################################
 CFG_IME=		# fcitx/ibus
-CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome/kde/efl
+CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome/kde
 CFG_VMCN=vbgst		# vbox/vbgst/kvm
 CFG_WEB=		# firefox-quantum 
 CFG_LOG=install.log	# define the log file
@@ -611,7 +611,9 @@ Install_VBGuest_Addition()
       # for non-default kernels choose virtualbox-guest-dkms
       #Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
       # To recompile the vbox kernel modules, run rcvboxdrv as root.
-      LogExec usermod -a -G vboxsf $DEFUSER
+      if test "x$DEFUSER" != "x"; then
+        LogExec usermod -a -G vboxsf $DEFUSER
+      fi
       return
       ;;
   esac
@@ -789,12 +791,12 @@ usage_exit()
   cat << my_usage
 $0 [OPTION]
 OPTION:
-  -d, --desktop     choose desktop [mate/xfce/cinnamon/gnome]
+  -d, --desktop     choose desktop [mate/xfce/lxde/cinnamon/gnome/kde]
   -i, --ime         choose IME input method [ibus/fcitx]
   -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
       --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
       --vboxhost    quick install Virtualbox machine
-      --firefox     install the latest firefox quantum
+      --firefox     quick install the latest firefox quantum
 
 my_usage
   exit 0
@@ -905,7 +907,6 @@ case $CFG_DESKTOP in
   cinnamon) Install_Desktop_Cinnamon ;;
   gnome) Install_Desktop_Gnome ;;
   kde) Install_Desktop_KDE ;;
-  efl) Install_Desktop_Enlightenment ;;
   mate|*) Install_Desktop_Mate ;;
 esac
 
