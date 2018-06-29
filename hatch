@@ -878,6 +878,9 @@ Setup_Bash
 LogAs "Enable the coredump in sysctl"
 LogExec sysctl -w kernel.core_pattern="core"
 
+if test "$CFG_SYS" = "ARCHLINUX"; then
+  Setup_Archlinux
+fi
 
 #############################################################################
 # install the X11 desktop environment
