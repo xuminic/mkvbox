@@ -73,7 +73,7 @@
 # Configure
 #############################################################################
 CFG_IME=		# fcitx/ibus
-CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome
+CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome/kde/efl
 CFG_VMCN=vbgst		# vbox/vbgst/kvm
 CFG_WEB=		# firefox-quantum 
 CFG_LOG=install.log	# define the log file
@@ -156,6 +156,11 @@ CFG_GUI_ARCHLINUX="gvim"
 CHROOT=
 #CHROOT=./tmp
 
+LogAs()
+{
+  echo -e "$@" | tee -a $CFG_LOG
+}
+
 LogExec()
 {
   echo $@ | tee -a $CFG_LOG
@@ -187,7 +192,7 @@ Installer()
   if test "x$*" = "x"; then
     return
   fi
-  echo -e \\nINSTALLING $* | tee -a $CFG_LOG
+  LogAs "\\nINSTALLING $*"
   case $CFG_SYS in
     CENTOS)
       LogExec yum -y install "$@"
@@ -204,7 +209,7 @@ Installer()
       ;;
   esac
   if ! test "x$?" = "x0"; then
-    echo Install failed! | tee -a $CFG_LOG
+    LogAs "Install failed!"
     exit 1
   fi
 }
@@ -215,7 +220,7 @@ Group_Install()
   if test "x$*" = "x"; then
     return
   fi
-  echo -e \\nINSTALLING "$@" | tee -a $CFG_LOG
+  LogAs "\\nINSTALLING $@"
   case $CFG_SYS in
     CENTOS)
       LogExec yum -y groupinstall \"$@\"
@@ -224,7 +229,7 @@ Group_Install()
       ;;
   esac
   if ! test "x$?" = "x0"; then
-    echo Install failed! | tee -a $CFG_LOG
+    LogAs "Install failed!"
     exit 1
   fi
 }
@@ -243,7 +248,7 @@ add_users()
     echo sudo -u "$1" mkdir "/home/$1/bin" | tee -a $CFG_LOG
   fi
 
-  echo Autologin the first console as the default user [$ADDUSER].
+  LogAs "Autologin the first console as the default user [$ADDUSER]."
   mkdir -p "$CHROOT/etc/systemd/system/getty@tty1.service.d"
   cat > "$CHROOT/etc/systemd/system/getty@tty1.service.d/autologin.conf" << AUTOLOGIN
 [Service]
@@ -252,7 +257,7 @@ ExecStart=-/sbin/agetty --autologin $ADDUSER --noclear %I \$TERM
 AUTOLOGIN
 
   #auto start X desktop as the default user so no xDM needed
-  echo Auto-start the X desktop | tee -a $CFG_LOG
+  LogAs "Auto-start the X desktop"
   cat > $CHROOT/etc/skel/.bash_profile << AUTOX11
 if [ -z "\$DISPLAY" ] && [ -n "\$XDG_VTNR" ] && [ "\$XDG_VTNR" -eq 1 ]; then
   exec startx
@@ -265,6 +270,17 @@ AUTOX11
 #############################################################################
 # Install packages
 #############################################################################
+Install_LightDM_Arch()
+{
+    # install and config the lightdm in Archlinux
+    Installer lightdm lightdm-gtk-greeter
+    LogExec mv -f /etc/lightdm/lightdm.conf /tmp/lightdm.conf
+    sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' \
+                /tmp/lightdm.conf > /etc/lightdm/lightdm.conf
+    LogExec rm -f /tmp/lightdm.conf
+    LogExec systemctl enable lightdm.service
+}
+
 Install_Desktop_Mate()
 {
   case $CFG_SYS in
@@ -280,6 +296,7 @@ Install_Desktop_Mate()
       ;;
     ARCHLINUX)
       Installer mate mate-extra 
+      Install_LightDM_Arch
       echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
   esac
 
@@ -302,6 +319,11 @@ Install_Desktop_Xfce()
     DEBIAN)
       Installer xfce4 xfce4-goodies lightdm
       ;;
+    ARCHLINUX)
+      Installer xfce4 xfce4-goodies
+      Install_LightDM_Arch
+      echo "exec startxfce4" > $CHROOT/etc/skel/.xinitrc
+      ;;
   esac
 }
 
@@ -313,6 +335,11 @@ Install_Desktop_Cinnamon()
       ;;
     DEBIAN)
       Installer cinnamon lightdm
+      ;;
+    ARCHLINUX)
+      Installer cinnamon
+      Install_LightDM_Arch
+      echo "exec cinnamon-session" > $CHROOT/etc/skel/.xinitrc
       ;;
   esac
 }
@@ -326,6 +353,15 @@ Install_Desktop_Gnome()
     DEBIAN)
       Installer gnome
       ;;
+    ARCHLINUX)
+      Installer gnome gnome-extra gdm
+      #echo "exec gnome-session" > $CHROOT/etc/skel/.xinitrc
+      cat > $CHROOT/etc/skel/.xinitrc << GNOMECLS
+export XDG_CURRENT_DESKTOP=GNOME-Classic:GNOME
+export GNOME_SHELL_SESSION_MODE=classic
+exec gnome-session --session=gnome-classic
+GNOMECLS
+      ;;
   esac
 }
 
@@ -333,7 +369,7 @@ Install_Desktop_Lxde()
 {
   case $CFG_SYS in
     CENTOS)
-      echo -e \\nINSTALLING Xfce instead of LXDE in CentOS 7 | tee -a $CFG_LOG
+      LogAs "\\nINSTALLING Xfce instead of LXDE in CentOS 7"
       Group_Install "Xfce"
       ;;
     DEBIAN)
@@ -341,6 +377,7 @@ Install_Desktop_Lxde()
       ;;
     ARCHLINUX)
       Installer lxde leafpad xarchiver
+      Install_LightDM_Arch
       echo "exec startlxde" > $CHROOT/etc/skel/.xinitrc
       ;;
   esac
@@ -357,6 +394,39 @@ LEAFPAD
       chmod 755 $CHROOT/usr/bin/leafpad
     fi
   fi
+}
+
+Install_Desktop_KDE()
+{
+  case $CFG_SYS in
+    CENTOS)
+      Group_Install "KDE"
+      ;;
+    DEBIAN)
+      Installer kde-plasma-desktop 
+      ;;
+    ARCHLINUX)
+      Installer plasma-desktop kde-applications 
+      Install_LightDM_Arch
+      echo "exec startkde" > $CHROOT/etc/skel/.xinitrc
+      ;;
+  esac
+}
+
+Install_Desktop_Enlightenment()
+{
+  case $CFG_SYS in
+    CENTOS)
+      echo "https://copr.fedorainfracloud.org/coprs/dchen/enlightement-19-no-wayland/"
+      ;;
+    DEBIAN)
+      echo "https://www.enlightenment.org/docs/distros/debian-start.md"
+      ;;
+    ARCHLINUX)
+      Installer enlightenment terminology
+      echo "exec enlightenment_start" > $CHROOT/etc/skel/.xinitrc
+      ;;
+  esac
 }
 
 
@@ -392,7 +462,7 @@ VIMRC
 
 Install_Chinese()
 {
-  echo -e \\nINSTALLING Chinese and Japanese IME package | tee -a $CFG_LOG
+  LogAs "\\nINSTALLING Chinese and Japanese IME package"
   case $CFG_IME in
     ibus) #install the Chinese input method: IBus
       case $CFG_SYS in
@@ -406,7 +476,7 @@ Install_Chinese()
         DEBIAN) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
 	ARCHLINUX) Installer fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc ;;
       esac ;;
-    *) echo "INSTALLING Chinese and Japanese Fonts only" | tee -a $CFG_LOG ;;
+    *) LogAs "INSTALLING Chinese and Japanese Fonts only" ;;
   esac
 
   # this font is for chinese subtitles in VLC
@@ -439,7 +509,7 @@ Install_Firefox_Latest()
 
   local FFOX=firefox-*
   if test ! -e $FFOX; then
-    echo ERROR: firefox not downloaded! | tee -a $CFG_LOG
+    LogAs "ERROR: firefox not downloaded!"
     exit
   fi
 
@@ -447,7 +517,7 @@ Install_Firefox_Latest()
   LogExec rm -f $FFOX
 
   if test -L /usr/bin/firefox; then	# firefox has already been linked out
-    echo Firefox updated. | tee -a $CFG_LOG
+    LogAs "Firefox updated."
   elif test -e /usr/bin/firefox; then
     LogExec mv -f /usr/bin/firefox /usr/bin/firefox-52
     LogExec ln -s /opt/firefox/firefox /usr/bin/firefox
@@ -564,7 +634,7 @@ Install_VBGuest_Addition()
 #  ls -l /usr/src/kernels/$(uname -r)/include/drm/drm.h | tee -a $CFG_LOG
 
   if test -e /root/VBoxLinuxAdditions.run; then
-    echo -e \\nINSTALLING Virtualbox Guest Addition | tee -a $CFG_LOG
+    LogAs "\\nINSTALLING Virtualbox Guest Addition"
     LogExec chmod 755 /root/VBoxLinuxAdditions.run
     LogExec /root/VBoxLinuxAdditions.run
 
@@ -576,7 +646,7 @@ Install_VBGuest_Addition()
 
 Setup_Bash()
 {
-  echo Updating the $CHROOT/etc/skel/.bashrc file. | tee -a $CFG_LOG
+  LogAs "Updating the $CHROOT/etc/skel/.bashrc file."
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
@@ -599,9 +669,17 @@ PATH="\$PATH:\$HOME/bin:."
 BASHRC
 }
 
+Setup_Archlinux()
+{
+  if test ! -L /etc/localtime; then
+    LogExec ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
+    LogExec hwclock --systohc
+  fi
+}
+
 Repo_Update_CentOS()
 {
-  echo -e "\\nINSTALLING extra and unofficial Repos" | tee -a $CFG_LOG
+  LogAs "\\nINSTALLING extra and unofficial Repos"
 
   #install extra repos
   Installer epel-release
@@ -644,7 +722,7 @@ GGLREPO
 
 Repo_Update_Debian()
 {
-  echo -e "\\nINSTALLING contrib, non-free and unofficial Repos" | tee -a $CFG_LOG
+  LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
   LogExec mv -f /etc/apt/sources.list /tmp/sources.list
   sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
   LogExec rm -f /tmp/sources.list
@@ -734,7 +812,6 @@ report_exit()
 
 
 CFG_SYS=$(System)
-echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
 
 # once for all in dry-run mode
 if test ! -d $CHROOT/etc/skel; then
@@ -758,12 +835,15 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+# wipe clean the log file
+echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
+
 case $CFG_SYS in
   CENTOS) Repo_Update_CentOS ;;
   DEBIAN) Repo_Update_Debian ;;
   ARCHLINUX) Repo_Update_Archlinux ;;
 
-  *) echo UNKNOWN OS SYSTEM! | tee -a $CFG_LOG
+  *) LogAs "UNKNOWN OS SYSTEM!"
      exit 2;;
 esac
 
@@ -787,7 +867,7 @@ case $CFG_SYS in
   ARCHLINUX) 
     Installer $CFG_CLI_ARCHLINUX
     # set up time and date
-    echo Initial Network Time Control | tee -a $CFG_LOG
+    LogAs "Initial Network Time Control"
     LogExec timedatectl set-ntp true
     ;;
 esac
@@ -795,7 +875,7 @@ esac
 # setting the bash
 Setup_Bash
 
-echo Enable the coredump in sysctl | tee -a $CFG_LOG
+LogAs "Enable the coredump in sysctl"
 LogExec sysctl -w kernel.core_pattern="core"
 
 
@@ -807,30 +887,23 @@ if test "x$CFG_DESKTOP" = "x"; then	# X11 GUI is not required.
 fi
 
 case $CFG_SYS in
-  CENTOS) Group_Install "X Window system" ;;
-  DEBIAN) Installer xinit ;;
-  ARCHLINUX) 
-    Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera 
-    # install and config the lightdm
-    Installer lightdm lightdm-gtk-greeter
-    LogExec mv -f /etc/lightdm/lightdm.conf /tmp/lightdm.conf
-    sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' /tmp/lightdm.conf > /etc/lightdm/lightdm.conf
-    LogExec rm -f /tmp/lightdm.conf
+  CENTOS) 
+    Group_Install "X Window system" 
+    # set runlevel to gui
+    #systemctl isolate graphical.target
+    LogExec systemctl set-default graphical.target
     ;;
+  DEBIAN) Installer xinit ;;
+  ARCHLINUX) Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera ;;
 esac
 case $CFG_DESKTOP in
-  mate) Install_Desktop_Mate ;;
   xfce) Install_Desktop_Xfce ;;
   lxde) Install_Desktop_Lxde ;;
   cinnamon) Install_Desktop_Cinnamon ;;
-  gnome|*) Install_Desktop_Gnome ;;
-esac
-
-# set runlevel to gui
-#systemctl isolate graphical.target
-case $CFG_SYS in
-  CENTOS) LogExec systemctl set-default graphical.target ;;
-  ARCHLINUX) LogExec systemctl enable lightdm.service ;;
+  gnome) Install_Desktop_Gnome ;;
+  kde) Install_Desktop_KDE ;;
+  efl) Install_Desktop_Enlightenment ;;
+  mate|*) Install_Desktop_Mate ;;
 esac
 
 # install extra chinese fonts and japanese fonts
