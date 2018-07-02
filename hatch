@@ -39,6 +39,7 @@
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
+#  * Archlinux keeps freezing in desktop panel applets
 #
 # History:
 #
@@ -52,8 +53,9 @@ CFG_VMCN=vbgst		# vbox/vbgst/kvm
 CFG_WEB=		# firefox-quantum 
 CFG_LOG=install.log	# define the log file
 CFG_CC=yes              # install C/C++ and binary tools
-CFG_HOSTNAME=mylinux		# setup the hostname
-CFG_DOMAIN=localdomain		# setup the domain name
+CFG_HOSTNAME=mylinux		# setup the hostname (archlinux)
+CFG_DOMAIN=localdomain		# setup the domain name (archlinux)
+CFG_VBGA=arch		# vbox guest addition source: arch/dkms/oracle (archlinux)
 
 #############################################################################
 # install command line tools
@@ -234,11 +236,11 @@ AUTOLOGIN
 
   #auto start X desktop as the default user so no xDM needed
   LogAs "Auto-start the X desktop"
-  cat > $CHROOT/etc/skel/.bash_profile << AUTOX11
+  cat > $CHROOT/etc/skel/.bash_profile << AUTODESK
 if [ -z "\$DISPLAY" ] && [ -n "\$XDG_VTNR" ] && [ "\$XDG_VTNR" -eq 1 ]; then
   exec startx
 fi
-AUTOX11
+AUTODESK
 
 }
 
@@ -575,6 +577,7 @@ Install_VBGuest_Addition()
   local DEFUSER=$(/bin/ls /home)
 
   #install GNU GCC Compiler, kernel module and Development Environment
+  LogAs "\\nINSTALLING Virtualbox Guest Addition"
   case $CFG_SYS in
     CENTOS) 
       Group_Install "Development Tools"
@@ -584,15 +587,22 @@ Install_VBGuest_Addition()
       Installer build-essential manpages-dev linux-headers-$(uname -r)
       ;;
     ARCHLINUX) 
-      # Archlinux can use Community Repo
-      Installer virtualbox-guest-utils virtualbox-guest-modules-arch
-      # for non-default kernels choose virtualbox-guest-dkms
-      #Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
-      # To recompile the vbox kernel modules, run rcvboxdrv as root.
-      if test "x$DEFUSER" != "x"; then
-        LogExec usermod -a -G vboxsf $DEFUSER
+      if test "$CFG_VBGA" = "oracle"; then
+        Installer base-devel linux-headers
+      else
+        # Archlinux can use Community Repo
+        if test "$CFG_VBGA" = "arch"; then
+          Installer virtualbox-guest-utils virtualbox-guest-modules-arch
+	else
+          # for non-default kernels choose virtualbox-guest-dkms
+          # To recompile the vbox kernel modules, run rcvboxdrv as root.
+          Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
+	fi
+        if test "x$DEFUSER" != "x"; then
+          LogExec usermod -a -G vboxsf $DEFUSER
+        fi
+        return
       fi
-      return
       ;;
   esac
 
@@ -614,7 +624,6 @@ Install_VBGuest_Addition()
 #  ls -l /usr/src/kernels/$(uname -r)/include/drm/drm.h | tee -a $CFG_LOG
 
   if test -e /root/VBoxLinuxAdditions.run; then
-    LogAs "\\nINSTALLING Virtualbox Guest Addition"
     LogExec chmod 755 /root/VBoxLinuxAdditions.run
     LogExec /root/VBoxLinuxAdditions.run
 
@@ -655,6 +664,8 @@ Setup_Archlinux()
     LogAs "\\nINSTALLING local time to Sydney, Australia"
     LogExec ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
     LogExec hwclock --systohc
+    LogAs "\\nINSTALLING Network Time Control"
+    LogExec timedatectl set-ntp true
   fi
   if test ! -e /etc/locale.conf; then
     LogAs "\\nINSTALLING locale: Chinese included"
@@ -871,12 +882,7 @@ Installer $CFG_CLI
 case $CFG_SYS in
   CENTOS) Installer $CFG_CLI_CENTOS ;;
   DEBIAN) Installer $CFG_CLI_DEBIAN ;;
-  ARCHLINUX) 
-    Installer $CFG_CLI_ARCHLINUX
-    # set up time and date
-    LogAs "\\nINSTALLING Network Time Control"
-    LogExec timedatectl set-ntp true
-    ;;
+  ARCHLINUX) Installer $CFG_CLI_ARCHLINUX ;;
 esac
 
 # setting the bash
