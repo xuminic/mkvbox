@@ -10,40 +10,14 @@
 #  5. pacstrap /mnt base
 #  6. genfstab -U /mnt >> /mnt/etc/fstab
 #  7. arch-chroot /mnt
-#  8. ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
-#  9. hwclock --systohc
-# 10. vi /etc/locale.gen
-#     en_US.UTF8 UTF-8
-#     zh_CN.UTF8 UTF-8
-#     zh_CN.GBK GBK
-#     zh_CN.GB2312 GB2312
-#     zh_CN.GB18030 GB18030
-# 11. locale-gen
-# 12. vi /etc/locale.conf
-#     LANG=en_US.UTF-8
-# 13. echo myarchlinux > /etc/hostname
-# 14. echo "127.0.1.1	myarchlinux.localdomain	myarchlinux" >> /etc/hosts
-# 15. cp /etc/netctl/examples/ethernet-dhcp /etc/netctl/
-# 16. vi /etc/netctl/ethernet-dhcp
+#  8. cp /etc/netctl/examples/ethernet-dhcp /etc/netctl/
+#  9. vi /etc/netctl/ethernet-dhcp
 #     Interface=enp0s3
-# 17. netctl enable ethernet-dhcp
-# 18. passwd root
-# 19. pacman -S grub
-# 20. grub-install --target=i386-pc /dev/sda
-# 21. grub-mkconfig -o /boot/grub/grub.cfg
-#
-# 22. pacman -S sudo
-# 23. "vi /etc/sudoer" or visudo   --> "%wheel    ALL=(ALL) ALL"
-#
-# 24. pacman -S git
-# 25. echo "git clone https://github.com/xuminic/mkvbox.git" > installer.sh
-# 26. chmod 755 installer.sh
-#
-# 27. In Virtualbox manager, Insert Guest Additions 5.1.x than lower version
-# 29. mount /dev/sr0 /mnt
-# 30. cp /mnt/VBoxLinuxAdditions.run ~
-# 31. umount /mnt
-# 32. Shutdown the Virtualbox Image and you may ZIP it for future using.
+# 10. netctl enable ethernet-dhcp
+# 11. passwd root
+# 12. pacman -S grub
+# 13. grub-install --target=i386-pc /dev/sda
+# 14. grub-mkconfig -o /boot/grub/grub.cfg
 #
 # Using the Installer script:
 #  1. install git
@@ -78,6 +52,8 @@ CFG_VMCN=vbgst		# vbox/vbgst/kvm
 CFG_WEB=		# firefox-quantum 
 CFG_LOG=install.log	# define the log file
 CFG_CC=yes              # install C/C++ and binary tools
+CFG_HOSTNAME=mylinux		# setup the hostname
+CFG_DOMAIN=localdomain		# setup the domain name
 
 #############################################################################
 # install command line tools
@@ -650,7 +626,7 @@ Install_VBGuest_Addition()
 
 Setup_Bash()
 {
-  LogAs "Updating the $CHROOT/etc/skel/.bashrc file."
+  LogAs "\\nINSTALLING the $CHROOT/etc/skel/.bashrc file."
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
@@ -676,8 +652,33 @@ BASHRC
 Setup_Archlinux()
 {
   if test ! -L /etc/localtime; then
+    LogAs "\\nINSTALLING local time to Sydney, Australia"
     LogExec ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
     LogExec hwclock --systohc
+  fi
+  if test ! -e /etc/locale.conf; then
+    LogAs "\\nINSTALLING locale: Chinese included"
+    cat >> /etc/locale.gen << LOCALE
+
+en_US.UTF8 UTF-8
+zh_CN.UTF8 UTF-8
+zh_CN.GBK GBK
+zh_CN.GB2312 GB2312
+zh_CN.GB18030 GB18030
+
+LOCALE
+    LogExec locale-gen
+    LogExec echo "LANG=en_US.UTF-8" >> /etc/locale.conf
+  fi
+  if test ! -e /etc/hostname; then
+    LogAs "\\nINSTALLING hostname: $CFG_HOSTNAME.$CFG_DOMAIN"
+    echo "$CFG_HOSTNAME" > /etc/hostname
+    echo "127.0.0.1   $CFG_HOSTNAME.$CFG_DOMAIN $CFG_HOSTNAME" >> /etc/hosts
+  fi
+  if test ! -e /etc/sudoer; then
+    LogAs "\\nINSTALLING sudo"
+    Installer sudo
+    echo "%wheel    ALL=(ALL) ALL" >> /etc/sudoer
   fi
 }
 
@@ -873,7 +874,7 @@ case $CFG_SYS in
   ARCHLINUX) 
     Installer $CFG_CLI_ARCHLINUX
     # set up time and date
-    LogAs "Initial Network Time Control"
+    LogAs "\\nINSTALLING Network Time Control"
     LogExec timedatectl set-ntp true
     ;;
 esac
@@ -881,7 +882,7 @@ esac
 # setting the bash
 Setup_Bash
 
-LogAs "Enable the coredump in sysctl"
+LogAs "\\nINSTALLING the coredump in sysctl"
 LogExec sysctl -w kernel.core_pattern="core"
 
 if test "$CFG_SYS" = "ARCHLINUX"; then
