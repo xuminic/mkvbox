@@ -480,7 +480,9 @@ Install_Chinese()
   esac
 
   # this font is for chinese subtitles in VLC
-  LogExec 7z x -o/usr/share/fonts DFKai-SB.7z
+  if test -e ./bin/DFKai-SB.7z; then
+    LogExec 7z x -o/usr/share/fonts ./bin/DFKai-SB.7z
+  fi
 
   # install extra chinese fonts and japanese fonts
   case $CFG_SYS in
@@ -724,6 +726,8 @@ GGLREPO
 
 Repo_Update_Debian()
 {
+  local keyring="deb-multimedia-keyring_2016.8.1_all.deb"
+
   LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
   LogExec mv -f /etc/apt/sources.list /tmp/sources.list
   sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
@@ -736,12 +740,12 @@ Repo_Update_Debian()
   LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
   if ! test "x$?" = "x0"; then
     # the backup plan for deb-multimedia keyring
-    if test -e deb-multimedia-keyring_2016.8.1_all.deb; then
-      LogExec dpkg -i deb-multimedia-keyring_2016.8.1_all.deb
+    if test -e ./bin/$keyring; then
+      LogExec dpkg -i ./bin/$keyring
     else
-      LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/deb-multimedia-keyring_2016.8.1_all.deb
-      if test -e deb-multimedia-keyring_2016.8.1_all.deb; then
-        LogExec dpkg -i deb-multimedia-keyring_2016.8.1_all.deb
+      LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
+      if test -e $keyring; then
+        LogExec dpkg -i $keyring
       fi
     fi
   fi
@@ -750,8 +754,8 @@ Repo_Update_Debian()
   echo deb http://dl.google.com/linux/chrome/deb/ stable main >> /etc/apt/sources.list
   echo deb http://dl.google.com/linux/earth/deb/ stable main >> /etc/apt/sources.list
   echo deb http://dl.google.com/linux/talkplugin/deb/ stable main >> /etc/apt/sources.list
-  if test -e linux_signing_key.pub; then
-    LogExec apt-key add linux_signing_key.pub
+  if test -e ./bin/linux_signing_key.pub; then
+    LogExec apt-key add ./bin/linux_signing_key.pub
   else
     LogExec wget https://dl.google.com/linux/linux_signing_key.pub
     if test -e linux_signing_key.pub; then
