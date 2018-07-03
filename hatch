@@ -61,7 +61,7 @@ CFG_VBGA=arch		# vbox guest addition source: arch/dkms/oracle
 # install command line tools
 #############################################################################
 #### ifconfig/lspci/samba/... always needed
-CFG_CLI="net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio openssh"
+CFG_CLI="net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio"
 #### firmware tools
 #CFG_CLI="$CFG_CLI srecord"
 #### development tools
@@ -70,8 +70,8 @@ CFG_CLI="net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio ope
 #### general tools
 CFG_CLI_CENTOS="hexedit"
 CFG_CLI_DEBIAN="aptitude"
-CFG_CLI_UBUNTU=""
-CFG_CLI_ARCHLINUX=""
+CFG_CLI_UBUNTU="openssh-client"
+CFG_CLI_ARCHLINUX="openssh"
 ### ffmpeg & libgd
 #CFG_CLI_CENTOS="$CFG_CLI_CENTOS ffms2-devel gd-devel"
 #CFG_CLI_DEBIAN="$CFG_CLI_DEBIAN libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"
@@ -154,7 +154,7 @@ System()
   if test -e /etc/centos-release; then
     echo "CENTOS"
   elif test -e /etc/debian_version; then
-    grep Ubuntu /etc/os-release
+    grep Ubuntu /etc/os-release > /dev/null
     if test "x$?" = "x0"; then
       echo "UBUNTU"
     else
@@ -176,7 +176,7 @@ Installer()
     Group="group"
     shift    
   fi
-  if test "x$@" = "x"; then
+  if test "x$1" = "x"; then
     return
   fi
   LogAs "\\nINSTALLING $@"
@@ -188,7 +188,7 @@ Installer()
         LogExec yum -y install "$@"
       fi
       ;;
-    DEBIAN)
+    DEBIAN|UBUNTU)
       if test "x$CHROOT" = x; then
         apt-get -y install "$@" 2>&1 | tee -a $CFG_LOG
       else
@@ -499,6 +499,17 @@ Install_Chinese()
 
 Install_Firefox_Latest()
 {
+  if test "$CFG_SYS" = "UBUNTU"; then
+    if test ! -e /etc/apt/sources.list.d/*-firefox-next-*; then
+      # install firefox quantum repo
+      Installer software-properties-common
+      LogExec add-apt-repository -y ppa:mozillateam/firefox-next
+      LogExec apt-get update
+    fi
+    Installer firefox
+    return
+  fi
+
   LogExec wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
 
   local FFOX=firefox-*
@@ -580,11 +591,17 @@ GGLYUM
       fi
       ;;
     ARCHLINUX) 
+      # Archlinux doesn't use Google repo but AUR
       # https://linuxhint.com/install-google-chrome-on-arch-linux/
       LogExec git clone https://aur.archlinux.org/google-chrome.git
-      cd google-chrome
-      LogExec makepkg -f -s
-      pacman -U google-chrome-*.pkg.tar.xz
+      if test -d google-chrome; then
+        cd google-chrome
+        LogExec makepkg -f -s
+	local fname=$(/bin/ls google-chrome-*.pkg.tar.xz)
+	if test "x$fname" != "x"; then
+          LogExec pacman -U $fname
+	fi
+      fi
       return
       ;;
   esac
@@ -858,10 +875,6 @@ Repo_Update_Debian()
 
 Repo_Update_Ubuntu()
 {
-  # install firefox quantum repo
-  Installer software-properties-common
-  LogExec add-apt-repository -y ppa:mozillateam/firefox-next
-
   #update and upgrade to the newest releases
   LogExec apt-get update 
   if ! test "x$?" = "x0"; then
@@ -1027,6 +1040,8 @@ esac
 #install the additional browsers
 if test "$CFG_WEB" = "firefox-quantum"; then
   Install_Firefox_Latest
+elif test "$CFG_WEB" = "chrome"; then
+  Install_Google_Chrome
 elif test "$CFG_WEB" != ""; then
   Installer $CFG_WEB
 fi
