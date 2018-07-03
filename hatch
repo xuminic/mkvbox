@@ -55,7 +55,7 @@ CFG_LOG=install.log	# define the log file
 CFG_CC=yes              # install C/C++ and binary tools
 CFG_HOSTNAME=mylinux		# setup the hostname (archlinux)
 CFG_DOMAIN=localdomain		# setup the domain name (archlinux)
-CFG_VBGA=arch		# vbox guest addition source: arch/dkms/oracle (archlinux)
+CFG_VBGA=arch		# vbox guest addition source: arch/dkms/oracle
 
 #############################################################################
 # install command line tools
@@ -70,6 +70,8 @@ CFG_CLI="net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio ope
 #### general tools
 CFG_CLI_CENTOS="hexedit"
 CFG_CLI_DEBIAN="aptitude"
+CFG_CLI_UBUNTU=""
+CFG_CLI_ARCHLINUX=""
 ### ffmpeg & libgd
 #CFG_CLI_CENTOS="$CFG_CLI_CENTOS ffms2-devel gd-devel"
 #CFG_CLI_DEBIAN="$CFG_CLI_DEBIAN libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"
@@ -165,15 +167,26 @@ System()
   fi
 }
 
+# Installer -g "Package Name", which is group install in CentOs
 Installer()
 {
-  if test "x$*" = "x"; then
+  local Group="normal"
+
+  if test "x$1" = "x-g"; then
+    Group="group"
+    shift    
+  fi
+  if test "x$@" = "x"; then
     return
   fi
-  LogAs "\\nINSTALLING $*"
+  LogAs "\\nINSTALLING $@"
   case $CFG_SYS in
     CENTOS)
-      LogExec yum -y install "$@"
+      if test "$Group" = "group"; then
+        LogExec yum -y groupinstall \"$@\"
+      else
+        LogExec yum -y install "$@"
+      fi
       ;;
     DEBIAN)
       if test "x$CHROOT" = x; then
@@ -184,26 +197,6 @@ Installer()
       ;;
     ARCHLINUX)
       LogExec pacman -S --noconfirm --needed "$@"
-      ;;
-  esac
-  if ! test "x$?" = "x0"; then
-    LogAs "Install failed!"
-    exit 1
-  fi
-}
-
-# Used in CentOS
-Group_Install()
-{
-  if test "x$*" = "x"; then
-    return
-  fi
-  LogAs "\\nINSTALLING $@"
-  case $CFG_SYS in
-    CENTOS)
-      LogExec yum -y groupinstall \"$@\"
-      ;;
-    DEBIAN)
       ;;
   esac
   if ! test "x$?" = "x0"; then
@@ -266,11 +259,14 @@ Install_Desktop_Mate()
       #Installer --enablerepo=epel-testing  atril atril-caja
       LogExec yum -y --enablerepo=epel-testing install atril atril-caja
 
-      Group_Install "MATE Desktop"
+      Installer -g "MATE Desktop"
       Installer caja-share
       ;;
     DEBIAN)
       Installer mate-desktop-environment-extras lightdm
+      ;;
+    UBUNTU)
+      Installer lightdm ubuntu-mate-desktop
       ;;
     ARCHLINUX)
       Installer mate mate-extra 
@@ -292,10 +288,10 @@ Install_Desktop_Xfce()
 {
   case $CFG_SYS in
     CENTOS)
-      Group_Install "Xfce"
+      Installer -g "Xfce"
       ;;
-    DEBIAN)
-      Installer xfce4 xfce4-goodies lightdm
+    DEBIAN|UBUNTU)
+      Installer xfce4 xfce4-goodies thunar-archive-plugin lightdm
       ;;
     ARCHLINUX)
       Installer xfce4 xfce4-goodies
@@ -314,6 +310,12 @@ Install_Desktop_Cinnamon()
     DEBIAN)
       Installer cinnamon lightdm
       ;;
+    UBUNTU)
+      LogExec apt-add-repository -y ppa:embrosyn/cinnamon
+      LogExec apt-get update
+      LogExec apt-get -y upgrade
+      Installer cinnamon lightdm
+      ;;
     ARCHLINUX)
       Installer cinnamon
       Install_LightDM_Arch
@@ -326,10 +328,13 @@ Install_Desktop_Gnome()
 {
   case $CFG_SYS in
     CENTOS)
-      Group_Install "Server with GUI"
+      Installer -g "Server with GUI"
       ;;
     DEBIAN)
       Installer gnome
+      ;;
+    UBUNTU)
+      Installer gnome-session-flashback
       ;;
     ARCHLINUX)
       Installer gnome gnome-extra gdm
@@ -348,9 +353,9 @@ Install_Desktop_Lxde()
   case $CFG_SYS in
     CENTOS)
       LogAs "\\nINSTALLING Xfce instead of LXDE in CentOS 7"
-      Group_Install "Xfce"
+      Installer -g "Xfce"
       ;;
-    DEBIAN)
+    DEBIAN|UBUNTU)
       Installer lxde leafpad xarchiver
       ;;
     ARCHLINUX)
@@ -378,10 +383,13 @@ Install_Desktop_KDE()
 {
   case $CFG_SYS in
     CENTOS)
-      Group_Install "KDE"
+      Installer -g "KDE"
       ;;
     DEBIAN)
       Installer kde-plasma-desktop 
+      ;;
+    UBUNTU)
+      Installer kubuntu-desktop
       ;;
     ARCHLINUX)
       Installer plasma-desktop kde-applications 
@@ -399,6 +407,12 @@ Install_Desktop_Enlightenment()
       ;;
     DEBIAN)
       echo "https://www.enlightenment.org/docs/distros/debian-start.md"
+      ;;
+    UBUNTU)
+      LogExec add-apt-repository -y ppa:niko2040/e19
+      LogExec apt-get update
+      LogExec apt-get -y upgrade
+      Installer enlightenment
       ;;
     ARCHLINUX)
       Installer enlightenment terminology
@@ -422,7 +436,7 @@ Install_VIm()
         LogExec ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
       fi
       ;;
-    DEBIAN)
+    DEBIAN|UBUNTU)
       if test -e $CHROOT/etc/alternatives/vim; then
         LogExec ln -s $CHROOT/etc/alternatives/vim $CHROOT/usr/bin/vi						   
       fi
@@ -445,13 +459,13 @@ Install_Chinese()
     ibus) #install the Chinese input method: IBus
       case $CFG_SYS in
 	CENTOS) Installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
-        DEBIAN) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
+        DEBIAN|UBUNTU) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
 	ARCHLINUX) Installer ibus ibus-qt ibus-libpinyin ibus-googlepinyin ibus-anthy ;;
       esac ;;
     fcitx) #install the Chinese input method: Fcitx
       case $CFG_SYS in
         CENTOS) Installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
-        DEBIAN) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
+        DEBIAN|UBUNTU) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
 	ARCHLINUX) Installer fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc ;;
       esac ;;
     *) LogAs "INSTALLING Chinese and Japanese Fonts only" ;;
@@ -468,7 +482,7 @@ Install_Chinese()
       Installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts
       Installer horai-ume-*-fonts ipa-*-fonts
       ;;
-    DEBIAN)
+    DEBIAN|UBUNTU)
       Installer fonts-arphic-ukai fonts-arphic-uming fonts-arphic-gkai00mp fonts-arphic-bkai00mp
       Installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
       ;;
@@ -522,6 +536,61 @@ FIREFOX
   fi
 }
 
+Install_Google_Chrome()
+{
+  case $CFG_SYS in
+    CENTOS)
+      if test ! -e $CHROOT/etc/yum.repos.d/google.repo; then
+        #install google repos
+        cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLYUM
+[google]
+name=Google - \$basearch
+baseurl=http://dl.google.com/linux/rpm/stable/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+[google-chrome]
+name=google-chrome
+baseurl=http://dl.google.com/linux/chrome/rpm/stable/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+GGLYUM
+        LogExec yum -y update
+      fi
+      ;;
+    DEBIAN|UBUNTU)
+      LogExec grep "dl.google.com" $CHROOT/etc/apt/sources.list
+      if test "x$?" != "x0"; then
+        echo "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> $CHROOT/etc/apt/sources.list
+	echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> $CHROOT/etc/apt/sources.list
+
+        if test -e ./bin/linux_signing_key.pub; then
+          LogExec apt-key add ./bin/linux_signing_key.pub
+        else
+          LogExec wget https://dl.google.com/linux/linux_signing_key.pub
+          if test -e linux_signing_key.pub; then
+            LogExec apt-key add linux_signing_key.pub
+          fi
+        fi
+	LogExec apt-get update
+	LogExec apt-get -y upgrade
+      fi
+      ;;
+    ARCHLINUX) 
+      # https://linuxhint.com/install-google-chrome-on-arch-linux/
+      LogExec git clone https://aur.archlinux.org/google-chrome.git
+      cd google-chrome
+      LogExec makepkg -f -s
+      pacman -U google-chrome-*.pkg.tar.xz
+      return
+      ;;
+  esac
+
+  Installer google-chrome-stable 
+}
 
 Install_Virtualbox()
 {
@@ -529,7 +598,7 @@ Install_Virtualbox()
   
   case $CFG_SYS in
     CENTOS) 
-      Group_Install "Development Tools"
+      Installer -g "Development Tools"
       Installer kernel-devel dkms wget
 
       if test ! -e /etc/yum.repos.d/virtualbox.repo; then
@@ -546,16 +615,38 @@ Install_Virtualbox()
 
       LogExec grep virtualbox /etc/apt/sources.list
       if test "x$?" != "x0"; then
-        echo -e \\ndeb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
+        echo -e "\\n# VirtualBox" >> /etc/apt/sources.list
+        echo "deb http://download.virtualbox.org/virtualbox/debian stretch contrib" >> /etc/apt/sources.list
 	if test ! -e oracle_vbox_2016.asc; then
           LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
         fi
 	if test -e oracle_vbox_2016.asc; then
           LogExec apt-key add oracle_vbox_2016.asc
 	fi
-        LogExec apt-get -y update
+        LogExec apt-get update
+	LogExec apt-get -y upgrade
       fi
       Installer VirtualBox-5.2
+      ;;
+    UBUNTU)
+      if test "$CFG_VBGA" = "oracle"; then
+        cat >> /etc/apt/sources.list << ORACLE
+
+# VirtualBox
+deb http://download.virtualbox.org/virtualbox/debian xenial contrib
+deb http://download.virtualbox.org/virtualbox/debian trusty contrib
+deb http://download.virtualbox.org/virtualbox/debian precise contrib
+ORACLE
+	LogExec wget https://www.virtualbox.org/download/oracle_vbox.asc
+	if test -e oracle_vbox.asc; then
+	  LogExec apt-key add oracle_vbox.asc
+	fi
+        LogExec apt-get update
+        LogExec apt-get -y upgrade
+	Installer VirtualBox-5.2 dkms
+      else
+        Installer virtualbox virtualbox-ext-pack virtualbox-qt dkms
+      fi
       ;;
     ARCHLINUX) 
       # Archlinux can use Community Repo
@@ -580,11 +671,22 @@ Install_VBGuest_Addition()
   LogAs "\\nINSTALLING Virtualbox Guest Addition"
   case $CFG_SYS in
     CENTOS) 
-      Group_Install "Development Tools"
+      Installer -g "Development Tools"
       Installer kernel-devel dkms
       ;;
     DEBIAN) 
       Installer build-essential manpages-dev linux-headers-$(uname -r)
+      ;;
+    UBUNTU)
+      if test "$CFG_VBGA" = "oracle"; then
+        Installer build-essential dkms
+      else
+        Installer virtualbox-guest-x11
+        if test "x$DEFUSER" != "x"; then
+          LogExec usermod -a -G vboxsf $DEFUSER
+        fi
+	return
+      fi
       ;;
     ARCHLINUX) 
       if test "$CFG_VBGA" = "oracle"; then
@@ -707,31 +809,6 @@ Repo_Update_CentOS()
   LogExec rpm -Uvh https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
   LogExec rpm -Uvh https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
 
-  #install google repos
-  cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLREPO
-[google]
-name=Google - \$basearch
-baseurl=http://dl.google.com/linux/rpm/stable/\$basearch
-enabled=1
-gpgcheck=1
-gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
-
-[google-chrome]
-name=google-chrome
-baseurl=http://dl.google.com/linux/chrome/rpm/stable/\$basearch
-enabled=1
-gpgcheck=1
-gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
-
-[google-earth]
-name=google-earth
-baseurl=http://dl.google.com/linux/earth/rpm/stable/\$basearch
-enabled=1
-gpgcheck=1
-gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
-
-GGLREPO
-
   #update and upgrade to the newest releases
   LogExec yum -y update
 }
@@ -740,47 +817,50 @@ Repo_Update_Debian()
 {
   local keyring="deb-multimedia-keyring_2016.8.1_all.deb"
 
-  LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
-  LogExec mv -f /etc/apt/sources.list /tmp/sources.list
-  sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
-  LogExec rm -f /tmp/sources.list
+  LogExec grep "main contrib non-free" $CHROOT/etc/apt/sources.list
+  if test "x$?" != "x0"; then
+    LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
+    LogExec mv -f $CHROOT/etc/apt/sources.list $CHROOT/tmp/sources.list
+    sed 's/main/main contrib non-free/' $CHROOT/tmp/sources.list > $CHROOT/etc/apt/sources.list
+    LogExec rm -f $CHROOT/tmp/sources.list
+  fi
 
-  echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
-  #echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
-  echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> /etc/apt/sources.list
-  LogExec apt-get update
-  LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
-  if ! test "x$?" = "x0"; then
-    # the backup plan for deb-multimedia keyring
-    if test -e ./bin/$keyring; then
-      LogExec dpkg -i ./bin/$keyring
-    else
-      LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
-      if test -e $keyring; then
-        LogExec dpkg -i $keyring
+  LogExec grep "deb-multimedia.org" $CHROOT/etc/apt/sources.list
+  if test "x$?" != "x0"; then
+    echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
+    #echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
+    echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> /etc/apt/sources.list
+    LogExec apt-get update
+    LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
+    if ! test "x$?" = "x0"; then
+      # the backup plan for deb-multimedia keyring
+      if test -e ./bin/$keyring; then
+        LogExec dpkg -i ./bin/$keyring
+      else
+        LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
+        if test -e $keyring; then
+          LogExec dpkg -i $keyring
+        fi
       fi
     fi
   fi
 
-  echo -e "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> /etc/apt/sources.list
-  echo deb http://dl.google.com/linux/chrome/deb/ stable main >> /etc/apt/sources.list
-  echo deb http://dl.google.com/linux/earth/deb/ stable main >> /etc/apt/sources.list
-  echo deb http://dl.google.com/linux/talkplugin/deb/ stable main >> /etc/apt/sources.list
-  if test -e ./bin/linux_signing_key.pub; then
-    LogExec apt-key add ./bin/linux_signing_key.pub
-  else
-    LogExec wget https://dl.google.com/linux/linux_signing_key.pub
-    if test -e linux_signing_key.pub; then
-      LogExec apt-key add linux_signing_key.pub
-    fi
+  #update and upgrade to the newest releases
+  LogExec apt-get update 
+  if ! test "x$?" = "x0"; then
+    exit $?
   fi
+  LogExec apt-get -y upgrade
+  if ! test "x$?" = "x0"; then
+    exit $?
+  fi
+}
 
-  echo -e "\\n# VirtualBox" >> /etc/apt/sources.list
-  echo deb http://download.virtualbox.org/virtualbox/debian stretch contrib >> /etc/apt/sources.list
-  LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
-  if test -e oracle_vbox_2016.asc; then
-    LogExec apt-key add oracle_vbox_2016.asc
-  fi
+Repo_Update_Ubuntu()
+{
+  # install firefox quantum repo
+  Installer software-properties-common
+  LogExec add-apt-repository -y ppa:mozillateam/firefox-next
 
   #update and upgrade to the newest releases
   LogExec apt-get update 
@@ -812,7 +892,8 @@ OPTION:
   -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
       --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
       --vboxhost    quick install Virtualbox machine
-      --firefox     quick install the latest firefox quantum
+      --firefox     quick install the latest Firefox Quantum
+      --chrome      quick install the Google Chrome
 
 my_usage
   exit 0
@@ -822,7 +903,7 @@ report_exit()
 {
   case $CFG_SYS in
     CENTOS) grep "Error:" $CFG_LOG ;;
-    DEBIAN) grep -e "E:" -e "W:"  $CFG_LOG ;; 
+    DEBIAN|UBUNTU) grep -e "E:" -e "W:"  $CFG_LOG ;; 
     ARCHLINUX) grep -e "warning:" -e "error:" $CFG_LOG ;;
   esac
   exit $1
@@ -846,6 +927,7 @@ while [ "$#" -gt 0 ]; do
     --vboxguest) Install_VBGuest_Addition; exit 0;;
     --vboxhost) Install_Virtualbox; exit 0;;
     --firefox) Install_Firefox_Latest; exit 0;;
+    --chrome) Install_Google_Chrome; exit 0;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;
@@ -859,6 +941,7 @@ echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
 case $CFG_SYS in
   CENTOS) Repo_Update_CentOS ;;
   DEBIAN) Repo_Update_Debian ;;
+  UBUNTU) Repo_Update_Ubuntu ;;
   ARCHLINUX) Repo_Update_Archlinux ;;
 
   *) LogAs "UNKNOWN OS SYSTEM!"
@@ -871,8 +954,8 @@ Install_VIm
 #install the C/C++ tool chains
 if test "$CFG_CC" = "yes"; then
   case $CFG_SYS in
-    CENTOS) Group_Install "Development Tools" ;;
-    DEBIAN) Installer build-essential manpages-dev ;;
+    CENTOS) Installer -g "Development Tools" ;;
+    DEBIAN|UBUNTU) Installer build-essential manpages-dev ;;
     ARCHLINUX) Installer base-devel ;;
   esac
 fi
@@ -882,6 +965,7 @@ Installer $CFG_CLI
 case $CFG_SYS in
   CENTOS) Installer $CFG_CLI_CENTOS ;;
   DEBIAN) Installer $CFG_CLI_DEBIAN ;;
+  UBUNTU) Installer $CFG_CLI_UBUNTU ;;
   ARCHLINUX) Installer $CFG_CLI_ARCHLINUX ;;
 esac
 
@@ -904,7 +988,7 @@ fi
 
 case $CFG_SYS in
   CENTOS) 
-    Group_Install "X Window system" 
+    Installer -g "X Window system" 
     # set runlevel to gui
     #systemctl isolate graphical.target
     LogExec systemctl set-default graphical.target
