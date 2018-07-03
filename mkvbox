@@ -36,6 +36,8 @@
 #  * Virtualbox Guest Addition has problem with CentOS7.5/7.6 Debian 9.
 #    CentOS 7 needs 5.2.x test builds at least
 #    Debian 9 needs 5.2.8 at least
+#  * Neither of Virtualbox Guest Addition in Ubuntu and Archlinux repo worked
+#    reliably so let's just stay focus on Oracle releases.
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
@@ -55,7 +57,6 @@ CFG_LOG=install.log	# define the log file
 CFG_CC=yes              # install C/C++ and binary tools
 CFG_HOSTNAME=mylinux		# setup the hostname (archlinux)
 CFG_DOMAIN=localdomain		# setup the domain name (archlinux)
-CFG_VBGA=arch		# vbox guest addition source: arch/dkms/oracle
 
 #############################################################################
 # install command line tools
@@ -646,24 +647,22 @@ Install_Virtualbox()
       Installer VirtualBox-5.2
       ;;
     UBUNTU)
-      if test "$CFG_VBGA" = "oracle"; then
-        cat >> /etc/apt/sources.list << ORACLE
+      # We can use Ubuntu repo for virtualbox, but Oracle release seems better
+      #Installer virtualbox virtualbox-ext-pack virtualbox-qt dkms
+      cat >> /etc/apt/sources.list << ORACLE
 
 # VirtualBox
 deb http://download.virtualbox.org/virtualbox/debian xenial contrib
 deb http://download.virtualbox.org/virtualbox/debian trusty contrib
 deb http://download.virtualbox.org/virtualbox/debian precise contrib
 ORACLE
-	LogExec wget https://www.virtualbox.org/download/oracle_vbox.asc
-	if test -e oracle_vbox.asc; then
-	  LogExec apt-key add oracle_vbox.asc
-	fi
-        LogExec apt-get update
-        LogExec apt-get -y upgrade
-	Installer VirtualBox-5.2 dkms
-      else
-        Installer virtualbox virtualbox-ext-pack virtualbox-qt dkms
+      LogExec wget https://www.virtualbox.org/download/oracle_vbox.asc
+      if test -e oracle_vbox.asc; then
+        LogExec apt-key add oracle_vbox.asc
       fi
+      LogExec apt-get update
+      LogExec apt-get -y upgrade
+      Installer VirtualBox-5.2 dkms
       ;;
     ARCHLINUX) 
       # Archlinux can use Community Repo
@@ -691,37 +690,19 @@ Install_VBGuest_Addition()
       Installer -g "Development Tools"
       Installer kernel-devel dkms
       ;;
-    DEBIAN) 
-      Installer build-essential manpages-dev linux-headers-$(uname -r)
-      ;;
-    UBUNTU)
-      if test "$CFG_VBGA" = "oracle"; then
-        Installer build-essential dkms
-      else
-        Installer virtualbox-guest-x11
-        if test "x$DEFUSER" != "x"; then
-          LogExec usermod -a -G vboxsf $DEFUSER
-        fi
-	return
-      fi
+    DEBIAN|UBUNTU) 
+      # Do not use Ubunto repo for guest addition
+      # Installer virtualbox-guest-x11 virtualbox-guest-dkms
+      Installer build-essential manpages-dev dkms linux-headers-$(uname -r)
       ;;
     ARCHLINUX) 
-      if test "$CFG_VBGA" = "oracle"; then
-        Installer base-devel linux-headers
-      else
-        # Archlinux can use Community Repo
-        if test "$CFG_VBGA" = "arch"; then
-          Installer virtualbox-guest-utils virtualbox-guest-modules-arch
-	else
-          # for non-default kernels choose virtualbox-guest-dkms
-          # To recompile the vbox kernel modules, run rcvboxdrv as root.
-          Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
-	fi
-        if test "x$DEFUSER" != "x"; then
-          LogExec usermod -a -G vboxsf $DEFUSER
-        fi
-        return
-      fi
+      # Do not use Archlinux repo for guest addition
+      # for default kernel
+      #Installer virtualbox-guest-utils virtualbox-guest-modules-arch
+      # for non-default kernels choose virtualbox-guest-dkms
+      # To recompile the vbox kernel modules, run rcvboxdrv as root.
+      #Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
+      Installer base-devel linux-headers
       ;;
   esac
 
