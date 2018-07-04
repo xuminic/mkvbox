@@ -574,9 +574,10 @@ GGLYUM
       fi
       ;;
     DEBIAN|UBUNTU)
-      LogExec grep "dl.google.com" $CHROOT/etc/apt/sources.list
+      #LogExec grep "dl.google.com" $CHROOT/etc/apt/sources.list
+      grep "dl.google.com" $CHROOT/etc/apt/sources.list > /dev/null
       if test "x$?" != "x0"; then
-        echo "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> $CHROOT/etc/apt/sources.list
+        echo -e "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> $CHROOT/etc/apt/sources.list
 	echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> $CHROOT/etc/apt/sources.list
 
         if test -e ./bin/linux_signing_key.pub; then
@@ -619,10 +620,10 @@ Install_Virtualbox()
       Installer -g "Development Tools"
       Installer kernel-devel dkms wget
 
-      if test ! -e /etc/yum.repos.d/virtualbox.repo; then
+      if test ! -e $CHROOT/etc/yum.repos.d/virtualbox.repo; then
         LogExec wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
         if test -e virtualbox.repo; then
-          LogExec mv -f virtualbox.repo /etc/yum.repos.d
+          LogExec mv -f virtualbox.repo $CHROOT/etc/yum.repos.d
           LogExec yum -y update
         fi
       fi 
@@ -631,10 +632,10 @@ Install_Virtualbox()
     DEBIAN)
       Installer build-essential manpages-dev
 
-      LogExec grep virtualbox /etc/apt/sources.list
+      grep virtualbox $CHROOT/etc/apt/sources.list > /dev/null
       if test "x$?" != "x0"; then
-        echo -e "\\n# VirtualBox" >> /etc/apt/sources.list
-        echo "deb http://download.virtualbox.org/virtualbox/debian stretch contrib" >> /etc/apt/sources.list
+        echo -e "\\n# VirtualBox" >> $CHROOT/etc/apt/sources.list
+        echo "deb http://download.virtualbox.org/virtualbox/debian stretch contrib" >> $CHROOT/etc/apt/sources.list
 	if test ! -e oracle_vbox_2016.asc; then
           LogExec wget https://www.virtualbox.org/download/oracle_vbox_2016.asc
         fi
@@ -649,19 +650,22 @@ Install_Virtualbox()
     UBUNTU)
       # We can use Ubuntu repo for virtualbox, but Oracle release seems better
       #Installer virtualbox virtualbox-ext-pack virtualbox-qt dkms
-      cat >> /etc/apt/sources.list << ORACLE
+      grep virtualbox $CHROOT/etc/apt/sources.list > /dev/null
+      if test "x$?" != "x0"; then
+        cat >> $CHROOT/etc/apt/sources.list << ORACLE
 
 # VirtualBox
 deb http://download.virtualbox.org/virtualbox/debian xenial contrib
 deb http://download.virtualbox.org/virtualbox/debian trusty contrib
 deb http://download.virtualbox.org/virtualbox/debian precise contrib
 ORACLE
-      LogExec wget https://www.virtualbox.org/download/oracle_vbox.asc
-      if test -e oracle_vbox.asc; then
-        LogExec apt-key add oracle_vbox.asc
+        LogExec wget https://www.virtualbox.org/download/oracle_vbox.asc
+        if test -e oracle_vbox.asc; then
+          LogExec apt-key add oracle_vbox.asc
+        fi
+        LogExec apt-get update
+        LogExec apt-get -y upgrade
       fi
-      LogExec apt-get update
-      LogExec apt-get -y upgrade
       Installer VirtualBox-5.2 dkms
       ;;
     ARCHLINUX) 
@@ -815,7 +819,7 @@ Repo_Update_Debian()
 {
   local keyring="deb-multimedia-keyring_2016.8.1_all.deb"
 
-  LogExec grep "main contrib non-free" $CHROOT/etc/apt/sources.list
+  grep "main contrib non-free" $CHROOT/etc/apt/sources.list > /dev/null
   if test "x$?" != "x0"; then
     LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
     LogExec mv -f $CHROOT/etc/apt/sources.list $CHROOT/tmp/sources.list
@@ -823,11 +827,11 @@ Repo_Update_Debian()
     LogExec rm -f $CHROOT/tmp/sources.list
   fi
 
-  LogExec grep "deb-multimedia.org" $CHROOT/etc/apt/sources.list
+  grep "deb-multimedia.org" $CHROOT/etc/apt/sources.list > /dev/null
   if test "x$?" != "x0"; then
-    echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> /etc/apt/sources.list
-    #echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
-    echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> /etc/apt/sources.list
+    echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
+    #echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
+    echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> $CHROOT/etc/apt/sources.list
     LogExec apt-get update
     LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
     if ! test "x$?" = "x0"; then
