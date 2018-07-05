@@ -247,8 +247,12 @@ Install_LightDM_Arch()
     # install and config the lightdm in Archlinux
     Installer lightdm lightdm-gtk-greeter
     LogExec mv -f /etc/lightdm/lightdm.conf /tmp/lightdm.conf
-    sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' \
+    if test "x$CHROOT" = x; then
+      sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' \
                 /tmp/lightdm.conf > /etc/lightdm/lightdm.conf
+    else
+      LogAs "sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' ..."
+    fi
     LogExec rm -f /tmp/lightdm.conf
     LogExec systemctl enable lightdm.service
 }
@@ -450,6 +454,7 @@ runtime! vimrc_example.vim
 set nobackup
 set noundofile
 set mouse=
+set so=1
 VIMRC
 }
 
@@ -823,7 +828,11 @@ Repo_Update_Debian()
   if test "x$?" != "x0"; then
     LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
     LogExec mv -f $CHROOT/etc/apt/sources.list $CHROOT/tmp/sources.list
-    sed 's/main/main contrib non-free/' $CHROOT/tmp/sources.list > $CHROOT/etc/apt/sources.list
+    if test "x$CHROOT" = x; then
+      sed 's/main/main contrib non-free/' $CHROOT/tmp/sources.list > $CHROOT/etc/apt/sources.list
+    else
+      LogAs "sed 's/main/main contrib non-free/' $CHROOT/tmp/sources.list"
+    fi
     LogExec rm -f $CHROOT/tmp/sources.list
   fi
 
@@ -892,6 +901,8 @@ OPTION:
       --vboxhost    quick install Virtualbox machine
       --firefox     quick install the latest Firefox Quantum
       --chrome      quick install the Google Chrome
+      --ime-ibus    quick install the Chinese/Japanese IME: ibus
+      --ime-fcitx   quick install the Chinese/Japanese IME: fcitx
 
 my_usage
   exit 0
@@ -926,6 +937,9 @@ while [ "$#" -gt 0 ]; do
     --vboxhost) Install_Virtualbox; exit 0;;
     --firefox) Install_Firefox_Latest; exit 0;;
     --chrome) Install_Google_Chrome; exit 0;;
+    --ime-ibus) CFG_IME=ibus; Install_Chinese; exit 0;;
+    --ime-fcitx) CFG_IME=fcitx; Install_Chinese; exit 0;;
+
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;
