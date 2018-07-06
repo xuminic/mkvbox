@@ -38,6 +38,8 @@
 #    Debian 9 needs 5.2.8 at least
 #  * Neither of Virtualbox Guest Addition in Ubuntu and Archlinux repo worked
 #    reliably so let's just stay focus on Oracle releases.
+#  * Ubuntu 18/Mate includes ibus in default so fcitx may not run.
+#    [Updated] Seems fcitx not functional in all distribution.
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
@@ -92,7 +94,7 @@ CFG_CLI_ARCHLINUX="openssh"
 # install X11 GUI tools
 #############################################################################
 #### old style X fonts
-CFG_GUI="qgit meld qbittorrent"
+CFG_GUI="qgit meld qbittorrent xinput"
 #CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
 
 #### general tools
@@ -810,6 +812,9 @@ ulimit -c unlimited
 
 PATH="\$PATH:\$HOME/bin:." 
 
+TouchID=$(/usr/bin/xinput list --id-only "SynPS/2 Synaptics TouchPad")
+/usr/bin/xinput --disable $TouchID
+
 BASHRC
 }
 
@@ -930,6 +935,21 @@ Repo_Update_Archlinux()
 {
   Installer -yu
   Installer -c
+}
+
+# For virtualbox quick copy
+Packer()
+{
+  local HOST=10.74.230.188
+  local FNAME=mkvbox-$(date +%Y%m%d%H%M%S).tar.gz
+
+  if test "x$1" = "x-u"; then
+    scp andy@${HOST}:~/Public/mkvbox-*.tar.gz .
+  else
+    tar czf $FNAME *
+    scp $FNAME andy@${HOST}:~/Public
+    rm -f $FNAME
+  fi
 }
 
 #############################################################################
