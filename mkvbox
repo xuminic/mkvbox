@@ -129,7 +129,9 @@ CFG_GUI_ARCHLINUX="gvim"
 #CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN fonts-wqy-microhei fonts-wqy-zenhei"
 #CFG_GUI_ARCHLINUX="$CFG_GUI_ARCHLINUX wqy-zenhei wqy-microhei-lite"
 #### Remote Desktop Client
-#CFG_GUI="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
+#CFG_GUI_CENTOS="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
+
+CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN pidgin pidgin-encryption pidgin-data pidgin-gnome-keyring pidgin-sipe"
 
 #############################################################################
 # Installer with debugger
@@ -281,7 +283,7 @@ Install_Desktop_Mate()
 
   # setting to support Chinese in pluma
   if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    if test -e $CHROOT/usr/bin/pluma; then
+    if test -e /usr/bin/pluma; then
       LogExec gsettings set org.mate.pluma auto-detected-encodings \
          "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
       LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
@@ -372,8 +374,8 @@ Install_Desktop_Lxde()
 
   # setting to support Chinese in leafpad
   if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    if test -e $CHROOT/usr/bin/leafpad; then
-      LogExec mv -f $CHROOT/usr/bin/leafpad $CHROOT/usr/bin/leafpad-gui
+    if test -e /usr/bin/leafpad; then
+      LogExec mv -f /usr/bin/leafpad /usr/bin/leafpad-gui
 
       cat > $CHROOT/usr/bin/leafpad << LEAFPAD
 #!/bin/sh
@@ -432,18 +434,18 @@ Install_VIm()
   Installer vim
 
   ### Link vi to vim as default
-  if test -e $CHROOT/usr/bin/vi; then
-    LogExec rm -f $CHROOT/usr/bin/vi
+  if test -e /usr/bin/vi; then
+    LogExec rm -f /usr/bin/vi
   fi
   case $CFG_SYS in
     CENTOS|ARCHLINUX)
-      if test -e $CHROOT/usr/bin/vim; then
-        LogExec ln -s $CHROOT/usr/bin/vim $CHROOT/usr/bin/vi
+      if test -e /usr/bin/vim; then
+        LogExec ln -s /usr/bin/vim /usr/bin/vi
       fi
       ;;
     DEBIAN|UBUNTU)
-      if test -e $CHROOT/etc/alternatives/vim; then
-        LogExec ln -s $CHROOT/etc/alternatives/vim $CHROOT/usr/bin/vi						   
+      if test -e /etc/alternatives/vim; then
+        LogExec ln -s /etc/alternatives/vim /usr/bin/vi						   
       fi
       ;;
   esac
@@ -557,7 +559,7 @@ Install_Google_Chrome()
 {
   case $CFG_SYS in
     CENTOS)
-      if test ! -e $CHROOT/etc/yum.repos.d/google.repo; then
+      if test ! -e /etc/yum.repos.d/google.repo; then
         #install google repos
         cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLYUM
 [google]
@@ -579,10 +581,9 @@ GGLYUM
       fi
       ;;
     DEBIAN|UBUNTU)
-      #LogExec grep "dl.google.com" $CHROOT/etc/apt/sources.list
-      grep "dl.google.com" $CHROOT/etc/apt/sources.list > /dev/null
+      grep "dl.google.com" /etc/apt/sources.list > /dev/null
       if test "x$?" != "x0"; then
-        echo -e "\\n# Google packages i.e Google Chrome/Earth/Talk plugin" >> $CHROOT/etc/apt/sources.list
+        echo -e "\\n# Google packages i.e Google Chrome" >> $CHROOT/etc/apt/sources.list
 	echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> $CHROOT/etc/apt/sources.list
 
         if test -e ./bin/linux_signing_key.pub; then
@@ -625,10 +626,10 @@ Install_Virtualbox()
       Installer -g "Development Tools"
       Installer kernel-devel dkms wget
 
-      if test ! -e $CHROOT/etc/yum.repos.d/virtualbox.repo; then
+      if test ! -e /etc/yum.repos.d/virtualbox.repo; then
         LogExec wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
         if test -e virtualbox.repo; then
-          LogExec mv -f virtualbox.repo $CHROOT/etc/yum.repos.d
+          LogExec mv -f virtualbox.repo /etc/yum.repos.d
           LogExec yum -y update
         fi
       fi 
@@ -637,7 +638,7 @@ Install_Virtualbox()
     DEBIAN)
       Installer build-essential manpages-dev
 
-      grep virtualbox $CHROOT/etc/apt/sources.list > /dev/null
+      grep virtualbox /etc/apt/sources.list > /dev/null
       if test "x$?" != "x0"; then
         echo -e "\\n# VirtualBox" >> $CHROOT/etc/apt/sources.list
         echo "deb http://download.virtualbox.org/virtualbox/debian stretch contrib" >> $CHROOT/etc/apt/sources.list
@@ -655,7 +656,7 @@ Install_Virtualbox()
     UBUNTU)
       # We can use Ubuntu repo for virtualbox, but Oracle release seems better
       #Installer virtualbox virtualbox-ext-pack virtualbox-qt dkms
-      grep virtualbox $CHROOT/etc/apt/sources.list > /dev/null
+      grep virtualbox /etc/apt/sources.list > /dev/null
       if test "x$?" != "x0"; then
         cat >> $CHROOT/etc/apt/sources.list << ORACLE
 
@@ -742,9 +743,54 @@ Install_VBGuest_Addition()
   fi
 }
 
+
+#anonymous_enable=NO             # Disallow anonymous logins
+#local_enable=YES                # Enable local users to login
+#write_enable=YES                # local user to be able to write to a directory
+#chroot_local_user=YES           # Local users will be ‘chroot jailed’ and they 
+#                                # will be denied access to any other part of the server.
+Install_Vsftpd()
+{
+  Installer vsftpd
+
+  LogExec mv -f /etc/vsftpd/vsftpd.conf /tmp/vsftpd.conf
+  if test "x$CHROOT" != x; then
+    LogAs "Configure the /etc/vsftpd/vsftpd.conf file"
+  else
+    sed -e 's/^[#]*anonymous_enable=.*/anonymous_enable=NO/g' \
+	    -e 's/^[#]*local_enable=.*/local_enable=YES/g' \
+	    -e 's/^[#]*write_enable=.*/write_enable=YES/g' \
+	    -e 's/^[#]*chroot_local_user=.*/chroot_local_user=YES/g' \
+	    /tmp/vsftpd.conf > /etc/vsftpd/vsftpd.conf
+    echo -e "\\npasv_enable=Yes\\npasv_max_port=10100\\npasv_min_port=10090\\n" \
+	    >> /etc/vsftpd/vsftpd.conf
+  fi
+  LogExec rm -f /tmp/vsftpd.conf
+
+  # First restart the service
+  LogExec systemctl restart vsftpd
+  # Then set the vsftpd service to start at boot
+  LogExec systemctl enable vsftpd
+
+  # Allow the default FTP port, port 21, through firewalld
+  LogExec firewall-cmd --permanent --add-port=21/tcp
+  # make sure it's public/  interfaces: eth0
+  LogExec firewall-cmd --get-active-zones
+  LogExec firewall-cmd --permanent --zone=public --add-port=10090-10100/tcp
+  # reload the firewall
+  LogExec firewall-cmd --reload
+
+  # Update the SELinux policy
+  LogExec setsebool -P ftpd_full_access 1
+  LogExec setsebool -P allow_ftpd_anon_write 1
+  LogExec setsebool -P ftpd_use_passive_mode 1
+  #getsebool -a | grep ftp
+}
+
+
 Setup_Bash()
 {
-  LogAs "\\nINSTALLING the $CHROOT/etc/skel/.bashrc file."
+  LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
@@ -824,19 +870,19 @@ Repo_Update_Debian()
 {
   local keyring="deb-multimedia-keyring_2016.8.1_all.deb"
 
-  grep "main contrib non-free" $CHROOT/etc/apt/sources.list > /dev/null
+  grep "main contrib non-free" /etc/apt/sources.list > /dev/null
   if test "x$?" != "x0"; then
     LogAs "\\nINSTALLING contrib, non-free and unofficial Repos"
-    LogExec mv -f $CHROOT/etc/apt/sources.list $CHROOT/tmp/sources.list
+    LogExec mv -f /etc/apt/sources.list /tmp/sources.list
     if test "x$CHROOT" = x; then
-      sed 's/main/main contrib non-free/' $CHROOT/tmp/sources.list > $CHROOT/etc/apt/sources.list
+      sed 's/main/main contrib non-free/' /tmp/sources.list > /etc/apt/sources.list
     else
-      LogAs "sed 's/main/main contrib non-free/' $CHROOT/tmp/sources.list"
+      LogAs "sed 's/main/main contrib non-free/' /tmp/sources.list"
     fi
-    LogExec rm -f $CHROOT/tmp/sources.list
+    LogExec rm -f /tmp/sources.list
   fi
 
-  grep "deb-multimedia.org" $CHROOT/etc/apt/sources.list > /dev/null
+  grep "deb-multimedia.org" /etc/apt/sources.list > /dev/null
   if test "x$?" != "x0"; then
     echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
     #echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
