@@ -481,7 +481,7 @@ Install_Chinese()
 
   # this font is for chinese subtitles in VLC
   if test -e ./bin/DFKai-SB.7z; then
-    LogExec 7z x -o/usr/share/fonts ./bin/DFKai-SB.7z
+    LogExec 7za x -o/usr/share/fonts ./bin/DFKai-SB.7z
   fi
 
   # install extra chinese fonts and japanese fonts
