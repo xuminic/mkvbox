@@ -838,11 +838,16 @@ TPADOFF
 Setup_Bash()
 {
   LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
+
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
 
 PS1='\u:\w\\$ '
+
+ulimit -c unlimited
+
+PATH="\$PATH:\$HOME/bin:." 
 
 alias egrep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
@@ -851,13 +856,20 @@ alias l.='ls -d .* --color=auto'
 alias ls='ls --color=auto'
 alias ll='ls -l --color=auto'
 alias path='echo \$PATH'
-alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'
-
-ulimit -c unlimited
-
-PATH="\$PATH:\$HOME/bin:." 
 
 BASHRC
+
+  case $CFG_SYS in
+    CENTOS)
+      echo "alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'" \
+	      >> $CHROOT/etc/skel/.bashrc
+      echo "" >> $CHROOT/etc/skel/.bashrc
+      ;;
+    DEBIAN|UBUNTU)
+      ;;
+    ARCHLINUX)
+      ;;
+  esac
 }
 
 Setup_Archlinux()
