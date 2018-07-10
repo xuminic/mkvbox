@@ -994,7 +994,7 @@ Repo_Update_Archlinux()
 # For virtualbox quick copy
 Packing()
 {
-  local HOST=andy@10.74.230.188:~/Public
+  local HOST=andy@10.0.2.2:~/Public
   local FNAME=mkvbox-$(date +%Y%m%d%H%M%S).tar.gz
 
   if test "x$1" = "x-u"; then
