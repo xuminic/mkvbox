@@ -94,7 +94,7 @@ CFG_CLI_ARCHLINUX="openssh"
 # install X11 GUI tools
 #############################################################################
 #### old style X fonts
-CFG_GUI="qgit meld qbittorrent xinput"
+CFG_GUI="qgit meld qbittorrent"
 #CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
 
 #### general tools
@@ -789,6 +789,51 @@ Install_Vsftpd()
   #getsebool -a | grep ftp
 }
 
+Toggle_Touchpad()
+{
+  if test ! -e /usr/bin/xinput; then
+    Installer xinput
+  fi
+
+  local PadID=$(xinput list --id-only "SynPS/2 Synaptics TouchPad" 2> /dev/null)
+
+  case $1 in
+    on|ON)
+      if test "$PadID" = ""; then
+        LogAs "TouchPad not found"
+      else
+        xinput --enable $PadID
+      fi
+      ;;
+    off|OFF)
+      if test "$PadID" = ""; then
+        LogAs "TouchPad not found"
+      else
+        xinput --disable $PadID
+      fi
+      ;;
+    *)
+      local ConfID="/usr/share/X11/xorg.conf.d/*-synaptics.conf"
+      if test ! -e $ConfID; then
+        ConfID="/usr/share/X11/xorg.conf.d/20-synaptics.conf"
+      fi
+
+      cat >> $ConfID << TPADOFF
+
+# Disable generic Synaptics device, as we're using
+Section "InputClass"
+	Identifier "SynPS/2 Synaptics TouchPad"
+	MatchProduct "SynPS/2 Synaptics TouchPad"
+	MatchIsTouchpad "on"
+	MatchOS "Linux"
+	MatchDevicePath "/dev/input/event*"
+	Option "Ignore" "on"
+EndSection
+
+TPADOFF
+      ;;
+  esac
+}
 
 Setup_Bash()
 {
@@ -811,9 +856,6 @@ alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-ti
 ulimit -c unlimited
 
 PATH="\$PATH:\$HOME/bin:." 
-
-TouchID=$(/usr/bin/xinput list --id-only "SynPS/2 Synaptics TouchPad")
-/usr/bin/xinput --disable $TouchID
 
 BASHRC
 }
@@ -938,16 +980,18 @@ Repo_Update_Archlinux()
 }
 
 # For virtualbox quick copy
-Packer()
+Packing()
 {
-  local HOST=10.74.230.188
+  local HOST=andy@10.74.230.188:~/Public
   local FNAME=mkvbox-$(date +%Y%m%d%H%M%S).tar.gz
 
   if test "x$1" = "x-u"; then
-    scp andy@${HOST}:~/Public/mkvbox-*.tar.gz .
+    echo Downloading from SSH server $HOST
+    scp $HOST/mkvbox-*.tar.gz .
   else
-    tar czf $FNAME *
-    scp $FNAME andy@${HOST}:~/Public
+    echo Uploading the package $FNAME to SSH server $HOST
+    tar czf $FNAME bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh
+    scp $FNAME $HOST
     rm -f $FNAME
   fi
 }
@@ -963,12 +1007,15 @@ OPTION:
   -d, --desktop     choose desktop [mate/xfce/lxde/cinnamon/gnome/kde]
   -i, --ime         choose IME input method [ibus/fcitx]
   -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
+  -t, --touchpad    change the touchpad control [disable/on/off]
       --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
       --vboxhost    quick install Virtualbox machine
       --firefox     quick install the latest Firefox Quantum
       --chrome      quick install the Google Chrome
       --ime-ibus    quick install the Chinese/Japanese IME: ibus
       --ime-fcitx   quick install the Chinese/Japanese IME: fcitx
+      --packing     upload the mkvbox package to the virtualbox SSH server
+      --unpack      download the mkvbox package from the virtualbox SSH server
 
 my_usage
   exit 0
@@ -999,13 +1046,15 @@ while [ "$#" -gt 0 ]; do
     -d|--desktop) CFG_DESKTOP="$2"; shift;;
     -i|--ime) CFG_IME="$2"; shift;;
     -v|--vm) CFG_VMCN="$2"; shift;;
+    -t|--touchpad) Toggle_Touchpad $2; exit 0;;
     --vboxguest) Install_VBGuest_Addition; exit 0;;
     --vboxhost) Install_Virtualbox; exit 0;;
     --firefox) Install_Firefox_Latest; exit 0;;
     --chrome) Install_Google_Chrome; exit 0;;
     --ime-ibus) CFG_IME=ibus; Install_Chinese; exit 0;;
     --ime-fcitx) CFG_IME=fcitx; Install_Chinese; exit 0;;
-
+    --packing) Packing; exit 0;;
+    --unpack) Packing -u; exit 0;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;
