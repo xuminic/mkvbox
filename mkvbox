@@ -53,7 +53,7 @@
 #############################################################################
 CFG_IME=		# fcitx/ibus
 CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome/kde
-CFG_VMCN=vbgst		# vbox/vbgst/kvm
+CFG_VMCN=vbgst		# vbox/vbgst/kvm/kgst
 CFG_WEB=		# firefox-quantum 
 CFG_LOG=install.log	# define the log file
 CFG_CC=yes              # install C/C++ and binary tools
@@ -835,6 +835,51 @@ TPADOFF
   esac
 }
 
+
+ToggleScreen()
+{
+  case $1 in
+    1920x1080) xrandr --output Virtual-0 --mode 1920x1080 ;;
+    1280x1024) xrandr --output Virtual-0 --mode 1280x1024 ;;
+    1280x960) xrandr --output Virtual-0 --mode 1280x960 ;;
+
+    xinit)
+      local DEVNAME="/usr/share/X11/xorg.conf.d/10-monitor.conf"
+      if test -e $DEVNAME; then
+        echo Found $DEVNAME! Please add modelines manually
+        DEVNAME=/dev/stdout
+      fi
+
+      cat > $DEVNAME << XMON
+Section "Monitor"
+    Identifier "Virtual-0 "
+    Modeline "1920x960_60.00"  152.00  1920 2032 2232 2544  960 963 973 996 -hsync +vsync
+    Modeline "1920x940_60.00"  148.75  1920 2032 2232 2544  940 943 953 976 -hsync +vsync
+    Modeline "1920x800_60.00"  125.00  1920 2024 2216 2512  800 803 813 831 -hsync +vsync
+    Modeline "1912x960_60.00"  151.50  1912 2024 2224 2536  960 963 973 996 -hsync +vsync
+    Modeline "1912x800_60.00"  124.75  1912 2016 2208 2504  800 803 813 831 -hsync +vsync
+    Option "PreferredMode" "1920x940_60.00"
+EndSection
+
+XMON
+      ;;
+
+    *x*)
+      local WIDTH=$(echo $1|cut -d'x' -f1)
+      local HEIGHT=$(echo $1|cut -d'x' -f2)
+      local MODLINE=$(cvt $WIDTH $HEIGHT | grep Modeline | cut -d' ' -f2-)
+      local MODNAME=$(echo $MODLINE | cut -d'"' -f2)
+      if test "$MODLINE" != ""; then
+        # It must use eval, otherwise the quota char (") will become part of mode name
+        eval xrandr --newmode $MODLINE
+        eval xrandr --addmode Virtual-0 $MODNAME
+        eval xrandr --output Virtual-0 --mode $MODNAME
+      fi
+      ;;
+  esac
+}
+
+
 Setup_Bash()
 {
   LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
@@ -1018,12 +1063,13 @@ $0 [OPTION]
 OPTION:
   -d, --desktop     choose desktop [mate/xfce/lxde/cinnamon/gnome/kde]
   -i, --ime         choose IME input method [ibus/fcitx]
-  -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm]
+  -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm/kgst]
   -t, --touchpad    change the touchpad control [disable/on/off]
       --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
       --vboxhost    quick install Virtualbox machine
       --firefox     quick install the latest Firefox Quantum
       --chrome      quick install the Google Chrome
+      --screen      change screen size of client (qxl) [1920x1080/1280x1024/.../xinit]
       --ime-ibus    quick install the Chinese/Japanese IME: ibus
       --ime-fcitx   quick install the Chinese/Japanese IME: fcitx
       --packing     upload the mkvbox package to the virtualbox SSH server
@@ -1042,7 +1088,6 @@ report_exit()
   esac
   exit $1
 }
-
 
 CFG_SYS=$(System)
 
@@ -1063,6 +1108,7 @@ while [ "$#" -gt 0 ]; do
     --vboxhost) Install_Virtualbox; exit 0;;
     --firefox) Install_Firefox_Latest; exit 0;;
     --chrome) Install_Google_Chrome; exit 0;;
+    --screen) ToggleScreen "$2"; exit 0;;
     --ime-ibus) CFG_IME=ibus; Install_Chinese; exit 0;;
     --ime-fcitx) CFG_IME=fcitx; Install_Chinese; exit 0;;
     --packing) Packing; exit 0;;
@@ -1153,7 +1199,8 @@ fi
 case $CFG_VMCN in
   vbox) Install_Virtualbox ;;
   vbgst) Install_VBGuest_Addition ;;
-  kvm) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86
+  kvm) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 ;;
+  kgst) ToggleScreen xinit ;;
 esac
 
 # install desktop application
