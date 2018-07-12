@@ -1042,9 +1042,11 @@ Packing()
   local HOST=andy@10.0.2.2:~/Public
   local FNAME=mkvbox-$(date +%Y%m%d%H%M%S).tar.gz
 
-  if test "x$1" = "x-u"; then
+  if test "$1" = "down"; then
     echo Downloading from SSH server $HOST
     scp $HOST/mkvbox-*.tar.gz .
+  elif test "$1" = "only"; then
+    tar czf $FNAME bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh
   else
     echo Uploading the package $FNAME to SSH server $HOST
     tar czf $FNAME bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh
@@ -1072,8 +1074,7 @@ OPTION:
       --screen      change screen size of client (qxl) [1920x1080/1280x1024/.../xinit]
       --ime-ibus    quick install the Chinese/Japanese IME: ibus
       --ime-fcitx   quick install the Chinese/Japanese IME: fcitx
-      --packing     upload the mkvbox package to the virtualbox SSH server
-      --unpack      download the mkvbox package from the virtualbox SSH server
+      --packing     pack and transfer the mkvbox to VM host [only/down]
 
 my_usage
   exit 0
@@ -1111,8 +1112,7 @@ while [ "$#" -gt 0 ]; do
     --screen) ToggleScreen "$2"; exit 0;;
     --ime-ibus) CFG_IME=ibus; Install_Chinese; exit 0;;
     --ime-fcitx) CFG_IME=fcitx; Install_Chinese; exit 0;;
-    --packing) Packing; exit 0;;
-    --unpack) Packing -u; exit 0;;
+    --packing) Packing $2; exit 0;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;

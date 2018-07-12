@@ -8,55 +8,33 @@
 # debug only
 #RUN=echo
 
-# Command line parameters
-VMISO=
-VMBOX=
-VMHDA=16G
-VMFMTA=qcow2
-VMCLSA="-o cluster_size=256K"
-VMHDB=
-VMFMTB=raw
-VMRAM=2G
+#############################################################################
+# Configure
+#############################################################################
+CFG_ISO=
+CFG_HDS=16G
+CFG_RAM=2G
 
+#############################################################################
+# System definition
+#############################################################################
 # KVM Machine configurations
 #VMMONITOR="-monitor stdio"
 VMMONITOR="-monitor vc"
-#VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
+#VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
+#          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
 VMVIDEO="-vga qxl"
 #VMIOMMU="-machine q35,accel=kvm -cpu host,kvm=off"
 VMIOMMU="-machine pc,accel=kvm -cpu host -smp 2"
 VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
-VMFLAGS="-enable-kvm $VMMONITOR $VMVIDEO -m $VMRAM $VMIOMMU $VMRNG"
+
+VMFLAGS="-enable-kvm -daemonize $VMMONITOR $VMVIDEO -m $CFG_RAM"
+VMRTIME="$VMIOMMU $VMRNG"
 
 
-usage_exit()
-{
-    cat << my_usage
-$0 [OPTION] KVM_IMAGE_NAME
-OPTION:
-  -i, --install=IMAGE        The installer ISO image
-  -a, --hda=SIZE             Define the size of hard disk A [16G]
-  -b, --hdb=SIZE             Define the size of hard disk B [none]
-  -r, --ram=RAM              Define the size of RAM [2G]
-      --iommu                List the IOMMU Group
-
-KVM_IMAGE_NAME is the base name of the KVM virtual machine.
-The correspondent image is KVM_IMAGE_NAME_hda.kvm.
-
-my_usage
-    exit 0
-}
-
-list_iommu()
-{
-    shopt -s nullglob
-    for d in /sys/kernel/iommu_groups/*/devices/*; do
-        n=${d#*/iommu_groups/*}; n=${n%%/*}
-        printf 'IOMMU Group %s ' "$n"
-        lspci -nns "${d##*/}"
-    done
-}
-
+#############################################################################
+# System Support Group
+#############################################################################
 # FIXME: qemu-system-x86_64 doesn't support l2-cache-size
 # qemu-system-x86_64: -drive file=vdisk_hda.kvm,l2-cache-size=2M: 
 #   could not open disk image vdisk_hda.kvm: Block format 'qcow2' used by 
@@ -70,24 +48,30 @@ list_iommu()
 # qemu [...] -drive if=none,id=drive0,format=raw -device virtio-blk-pci,drive=drive0,scsi=off ...
 add_drive()
 {
-    local TYPE=$(qemu-img info $1 | grep 'file format:' | cut -d' ' -f3)
-    #local SIZE=$(qemu-img info $1 | grep 'virtual size:' | cut -d'(' -f2 | cut -d' ' -f1)
-    local SIZE=0
-    local OPT_CACHE=""
-    #ocal OPT_AIO=",aio=native,cache=none"
+  local TYPE=$(qemu-img info $1 | grep 'file format:' | cut -d' ' -f3)
+  #local SIZE=$(qemu-img info $1 | grep 'virtual size:' | cut -d'(' -f2 | cut -d' ' -f1)
+  local SIZE=0
+  local OPT_CACHE=""
+  #local OPT_AIO=",aio=native,cache=none"
 
-    case "$TYPE" in
-        qcow2)
-            if [ $SIZE -ge 68719476736 ]; then
-                OPT_CACHE=",l2-cache-size=8M"
-            elif [ $SIZE -ge 34359738368 ]; then
-                OPT_CACHE=",l2-cache-size=4M"
-            elif [ $SIZE -ge 17179869184 ]; then
-                OPT_CACHE=",l2-cache-size=2M"
-            fi;;
-    esac
-    #echo "-drive file=${1}${OPT_CACHE},if=virtio"
-    echo "-device virtio-blk-pci,drive=${TYPE},scsi=off -drive file=${1}${OPT_CACHE},if=none,id=${TYPE}${OPT_AIO}"
+  case "$TYPE" in
+    qcow2)
+      if [ $SIZE -ge 68719476736 ]; then
+        OPT_CACHE=",l2-cache-size=8M"
+      elif [ $SIZE -ge 34359738368 ]; then
+        OPT_CACHE=",l2-cache-size=4M"
+      elif [ $SIZE -ge 17179869184 ]; then
+        OPT_CACHE=",l2-cache-size=2M"
+      fi ;;
+
+    raw|vvfat|vpc|vmdk|vhdx|vdi)
+      ;;
+        
+    *) return ;;
+  esac
+
+  #echo "-drive file=${1}${OPT_CACHE},if=virtio"
+  echo "-device virtio-blk-pci,drive=${TYPE},scsi=off -drive file=${1}${OPT_CACHE},if=none,id=${TYPE}${OPT_AIO}"
 } 
 
 
@@ -109,82 +93,165 @@ add_nic()
 }
 
 
+# $1: size  $2: name
+vm_create_disk()
+{
+  if test ! -e $2; then
+    echo qemu-img create -f qcow2 -o cluster_size=256K $2 $1
+    $RUN qemu-img create -f qcow2 -o cluster_size=256K $2 $1
+  fi
+}
+
+
+# searching the available vm file systems
+vm_search()
+{
+  if test -e $1; then
+    # if explicily given the vm file system
+    echo $(add_drive $1)
+  else
+    # if given the vm name then searching for it's file systems 
+    # in the name pattern: xxx_hdx.*
+    local HDD=""
+    for i in ${1}_hd?.{qcow2,raw,vvfat,vpc,vmdk,vhdx,vdi}
+    do
+      if test -e $i; then
+        HDD="$HDD $(add_drive $i)"
+      fi
+    done
+    echo $HDD
+  fi
+}
+
 # Install the vmachine
 # Two parameters: $1 is the ISO image; $2 is the vmachine name
 vm_install()
 {
-    if [ ! -e $1 ]; then
-        echo ISO Image [$1] not found
-        return
-    fi
+  local HDD=""
 
-    if [ ! -e ${2}_hda.kvm ]; then
-        $RUN qemu-img create -f $VMFMTA $VMCLSA ${2}_hda.kvm $VMHDA
-    fi
-    local FSTDRV=$(add_drive ${2}_hda.kvm)
+  if test ! -e $1; then
+    echo ISO Image [$1] not found
+  elif test -e $2; then
+    HDD=$(add_drive $2)     # explicily given the vm file system
+  else
+    # searching for vm file systems in the name pattern: xxx_hdx.*
+    HDD=$(vm_search $2)
 
-    if [ -e ${2}_hdb.kvm ]; then
-        local SECDRV=$(add_drive ${2}_hdb.kvm)
-    elif [ "$VMHDB" != "" ]; then
-        $RUN qemu-img create -f $VMFMTB ${2}_hdb.kvm $VMHDB
-        local SECDRV=$(add_drive ${2}_hdb.kvm)
+    # if no vm file system were found then create a default one
+    if test "$HDD" = ""; then
+      echo VM File System not found! Creating by default [qcow2, $CFG_HDS]
+      $RUN vm_create_disk $CFG_HDS ${2}_hda.qcow2
+      HDD=$(add_drive ${2}_hda.qcow2)
     fi
+  fi
 
-    $RUN qemu-system-x86_64 -cdrom "$1" -name "$2" -boot order=d \
-        $VMFLAGS $(add_nic ${2}) $FSTDRV $SECDRV
+  if test "$HDD" = ""; then
+    echo VM File System not found [%2]
+  else
+    echo qemu-system-x86_64 -cdrom "$1" -boot order=d $VMFLAGS $HDD
+    $RUN qemu-system-x86_64 -cdrom "$1" -boot order=d $VMFLAGS $HDD
+  fi
 }
 
 # Run the vmachine
 # One parameter: $1 is the vmachine name
 vm_run()
 {
-    if [ -e ${1}_hda.kvm ]; then
-        local FSTDRV=$(add_drive ${1}_hda.kvm)
-    else
-        echo KVM Image [$1] not found
-        return
-    fi
-    if [ -e ${1}_hdb.kvm ]; then
-        local SECDRV=$(add_drive ${1}_hdb.kvm)
-    fi
-    echo qemu-system-x86_64 -name $1 $VMFLAGS $(add_nic ${1}) $FSTDRV $SECDRV
-    $RUN qemu-system-x86_64 -name $1 $VMFLAGS $(add_nic ${1}) $FSTDRV $SECDRV
+  local HDD=$(vm_search $1)
+
+  if test "$HDD" = ""; then
+    echo KVM Image [$1] not found
+  else
+    echo qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME $(add_nic ${1}) $HDD
+    $RUN qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME $(add_nic ${1}) $HDD
+  fi
 }
 
+list_iommu()
+{
+    shopt -s nullglob
+    for d in /sys/kernel/iommu_groups/*/devices/*; do
+        n=${d#*/iommu_groups/*}; n=${n%%/*}
+        printf 'IOMMU Group %s ' "$n"
+        lspci -nns "${d##*/}"
+    done
+}
 
+list_vmdisk()
+{
+  if test -e $2; then
+    if test "$1" = "-s"; then
+      qemu-img snapshot -l $2
+    else
+      qemu-img info $2
+    fi
+  else
+    for i in ${2}_hd?.{qcow2,raw,vvfat,vpc,vmdk,vhdx,vdi}
+    do
+      if test -e $i; then
+        if test "$1" = "-s"; then
+          qemu-img snapshot -l $i
+	else
+	  qemu-img info $i
+	  echo ""
+	fi
+      fi
+    done
+  fi
+}
+
+usage_exit()
+{
+    cat << my_usage
+$0 [OPTION] KVM_IMAGE_NAME
+OPTION:
+  -i, --install=IMAGE        The installer ISO image
+  -r, --ram=RAM              Define the size of RAM [2G]
+  -s, --hdd-size=SIZE        Define the size of hard disks [16G]
+      --iommu                List the IOMMU Group
+      --snapshot             List the known snapshots
+      --vmdisk               List the VM disk volumn
+
+KVM_IMAGE_NAME is the base name of the KVM virtual machine.
+The correspondent image is KVM_IMAGE_NAME_hda.kvm.
+
+my_usage
+    exit 0
+}
+
+#############################################################################
+# main
+#############################################################################
 while [ "$#" -gt 0 ]; do 
-    case "$1" in
-        -h|--help) usage_exit;;
+  case "$1" in
+    -h|--help) usage_exit;;
 
-        -i) VMISO="$2"; shift;;
-        --install=*) VMISO="${1#*=}";;
+    -i) CFG_ISO="$2"; shift;;
+    --install=*) CFG_ISO="${1#*=}";;
 
-        -a) VMHDA="$2"; shift;;
-        --hda=*) VMHDA="${1#*=}";;
+    -r) CFG_RAM="$2"; shift;;
+    --ram=*) CFG_RAM="${1#*=}";;
 
-        -b) VMHDB="$2"; shift;;
-        --hdb=*) VMHDB="${1#*=}";;
+    -s) CFG_HDS="$2"; shift;;
+    --hdd-size=*) CFG_HDS="${1#*=}";;
 
-        -r) VMRAM="$2"; shift;;
-        --ram=*) VMRAM="${1#*=}";;
+    --iommu) list_iommu; exit 0;;
 
-        --iommu) list_iommu; exit 0;;
+    --snapshot) list_vmdisk -s $2; exit 0;;
+    --vmdisk)   list_vmdisk -d $2; exit 0;;
 
-        -*) echo Unknown parameter [$@]; exit 1;;
-        *) break;;
-    esac
-    shift
+    -*) echo Unknown parameter [$@]; exit 1;;
+    *) break;;
+  esac
+  shift
 done
 
 if [ "$#" = "0" ]; then 
-    usage_exit
+  usage_exit
 fi
 
-if [ "$VMISO" != "" ]; then
-    vm_install $VMISO $1
-elif [ -e ${1}_hda.kvm ]; then 
-    vm_run $1
+if [ "$CFG_ISO" != "" ]; then
+  vm_install $CFG_ISO $1
 else
-    echo Not found the KVM machine [${1}_hda.kvm]
-    exit 2
+  vm_run $1
 fi
