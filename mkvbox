@@ -51,89 +51,73 @@
 #############################################################################
 # Configure
 #############################################################################
-CFG_IME=		# fcitx/ibus
 CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome/kde
-CFG_VMCN=vbgst		# vbox/vbgst/kvm/kgst
-CFG_WEB=		# firefox-quantum 
+CFG_IME=ibus            # ibus/fcitx
+CFG_VMCN=kvmguest       # vbguest/kvmguest
 CFG_LOG=install.log	# define the log file
-CFG_CC=yes              # install C/C++ and binary tools
 CFG_HOSTNAME=mylinux		# setup the hostname (archlinux)
 CFG_DOMAIN=localdomain		# setup the domain name (archlinux)
 
 #############################################################################
 # install command line tools
 #############################################################################
-#### ifconfig/lspci/samba/... always needed
-CFG_CLI="net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio"
-#### firmware tools
-#CFG_CLI="$CFG_CLI srecord"
-#### development tools
-#CFG_CLI="$CFG_CLI autoconf libtooli gdb"
-
-#### general tools
-CFG_CLI_CENTOS="hexedit"
-CFG_CLI_DEBIAN="aptitude"
-CFG_CLI_UBUNTU="openssh-client"
-CFG_CLI_ARCHLINUX="openssh"
+CFG_CLI="cli vim"
+#### basic development tools
+#CFG_CLI="$CFG_CLI devel"
+#### firmware and general development tools
+#CFG_CLI="$CFG_CLI devmore"
 ### ffmpeg & libgd
-#CFG_CLI_CENTOS="$CFG_CLI_CENTOS ffms2-devel gd-devel"
-#CFG_CLI_DEBIAN="$CFG_CLI_DEBIAN libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev"
-#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX ffmpeg gd"
+#CFG_CLI="$CFG_CLI libffmpeg"
 ####install SDL and freeimage
-#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX sdl2 freeimage lsb_release"
+#CFG_CLI="$CFG_CLI freeimage"
 #### python basic and science kit
-#### Debian 9 has removed these kits so don't bother
-#CFG_CLI_CENTOS="$CFG_CLI_CENTOS python2-pip python-devel python-virtualenv"
-#CFG_CLI_CENTOS="$CFG_CLI_CENTOS python34-pip python34-devel python34-virtualenv"
-#CFG_CLI_CENTOS="$CFG_CLI_CENTOS scipy python34-scipy"
-#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX python-pip python2-pip python-virtualenv python2-virtualenv"
-#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX python-scipy python2-scipy python-scikit-learn python2-scikit-learn"
-#CFG_CLI_ARCHLINUX="$CFG_CLI_ARCHLINUX python-matplotlib python2-matplotlib"
+#CFG_CLI="$CFG_CLI pymore"
+#### ftp server and configure
+#CFG_CLI="$CFG_CLI vsftpd"
+#### setting the bash
+CFG_CLI="$CFG_CLI bash"
+CFG_CLI="$CFG_CLI archlinux"
 
 #############################################################################
 # install X11 GUI tools
 #############################################################################
 #### old style X fonts
-CFG_GUI="qgit meld qbittorrent"
-#CFG_GUI="$CFG_GUI xorg-fonts-100dpi xorg-fonts-75dpi"
+CFG_GUI="xinit"
 
-#### general tools
-CFG_GUI_CENTOS="vim-X11"
-CFG_GUI_DEBIAN="vim-gtk"
-CFG_GUI_ARCHLINUX="gvim" 
 #### browers
-#CFG_GUI="$CFG_GUI firefox firefox-esr chromium google-chrome-stable"
-#CFG_GUI="$CFG_GUI filezilla putty wireshark"
-#### IM: pidgin
-#CFG_GUI="$CFG_GUI pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts"
-#### image and picture tools
-#CFG_GUI="$CFG_GUI geeqie gthumb imagemagick gimp inkscape"
-#### CAD suites
-#CFG_GUI="$CFG_GUI librecad freecad openscad blender"
-#### video player
-#CFG_GUI="$CFG_GUI vlc smplayer"
-#### GStreamer codec collection
-#CFG_GUI="$CFG_GUI gstreamer gstreamer-ffmpeg gstreamer-plugins-base \
-#	  gstreamer-plugins-good gstreamer-plugins-bad \
-#	  gstreamer-plugins-bad-free gstreamer-plugins-bad-nonfree \
-#	  gstreamer-plugins-ugly gstreamer-plugins-base-tools \
-#	  gstreamer1 gstreamer1-libav gstreamer1-plugins-base \
-#	  streamer1-plugins-base-tools gstreamer1-plugins-good \
-#	  gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
-#	  gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free
-
-#### office suite
-#CFG_GUI_CENTOS="$CFG_GUI_CENTOS libreoffice"	
-#CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN libreoffice"
-#CFG_GUI_ARCHLINUX="$CFG_GUI_ARCHLINUX libreoffice-fresh"
-#### chinese fonts and japanese basic fonts
-#CFG_GUI_CENTOS="$CFG_GUI_CENTOS wqy-microhei-fonts wqy-zenhei-fonts"
-#CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN fonts-wqy-microhei fonts-wqy-zenhei"
-#CFG_GUI_ARCHLINUX="$CFG_GUI_ARCHLINUX wqy-zenhei wqy-microhei-lite"
+#CFG_GUI="$CFG_GUI firefox
+#CFG_GUI="$CFG_GUI firefox_qtm
+#CFG_GUI="$CFG_GUI chromium
+#CFG_GUI="$CFG_GUI chrome
+#### Downloader, for example, filezilla, bittorrents
+#CFG_GUI="$CFG_GUI downloader"
+#### Virtual Machine Hosts
+#CFG_GUI="$CFG_GUI virtualbox"
+#CFG_GUI="$CFG_GUI kvmhost"
 #### Remote Desktop Client
-#CFG_GUI_CENTOS="$CFG_GUI remmina remmina-plugins-vnc remmina-plugins-rdp"
+#CFG_GUI="$CFG_GUI remotetty"
+#### IM: pidgin
+#CFG_GUI="$CFG_GUI pidgin"
+#### image and picture tools
+#CFG_GUI="$CFG_GUI picture"
+CFG_GROUP_PIC="geeqie gthumb imagemagick gimp inkscape"
+#### CAD suites
+#CFG_GUI="$CFG_GUI cad"
+CFG_GROUP_CAD="librecad freecad openscad blender"
+#### video player
+#CFG_GUI="$CFG_GUI vlc"
+#### GStreamer codec collection
+#CFG_GUI="$CFG_GUI gstreamer"
+#### office suite
+#CFG_GUI="$CFG_GUI office"	
+#### IME for chinese and japanese
+#CFG_GUI="$CFG_GUI ibus"
+#CFG_GUI="$CFG_GUI fcitx"
+#### chinese fonts and japanese basic fonts. Option: basic full
+#CFG_GUI="$CFG_GUI eafont"
+CFG_GROUP_EA_FONT="basic"
+#CFG_GROUP_EA_FONT="full"
 
-CFG_GUI_DEBIAN="$CFG_GUI_DEBIAN pidgin pidgin-encryption pidgin-data pidgin-gnome-keyring pidgin-sipe"
 
 #############################################################################
 # Installer with debugger
@@ -282,15 +266,6 @@ Install_Desktop_Mate()
       Install_LightDM_Arch
       echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
   esac
-
-  # setting to support Chinese in pluma
-  if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    if test -e /usr/bin/pluma; then
-      LogExec gsettings set org.mate.pluma auto-detected-encodings \
-         "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-      LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
-    fi
-  fi
 }
 
 Install_Desktop_Xfce()
@@ -373,19 +348,6 @@ Install_Desktop_Lxde()
       echo "exec startlxde" > $CHROOT/etc/skel/.xinitrc
       ;;
   esac
-
-  # setting to support Chinese in leafpad
-  if test "x$CFG_IME" = xibus || test "x$CFG_IME" = xfcitx; then
-    if test -e /usr/bin/leafpad; then
-      LogExec mv -f /usr/bin/leafpad /usr/bin/leafpad-gui
-
-      cat > $CHROOT/usr/bin/leafpad << LEAFPAD
-#!/bin/sh
-/usr/bin/leafpad-gui --codeset=gbk \$*
-LEAFPAD
-      chmod 755 $CHROOT/usr/bin/leafpad
-    fi
-  fi
 }
 
 Install_Desktop_KDE()
@@ -430,9 +392,28 @@ Install_Desktop_Enlightenment()
   esac
 }
 
-
-Install_VIm()
+Install_Batch_dummy()
 {
+  echo This is a dummy installation for testing only!
+}
+
+Install_Batch_cli()
+{
+  LogAs "\\nINSTALLING generic CLI tools"
+
+  #### ifconfig/lspci/samba/... always needed
+  Installer net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio
+  case $CFG_SYS in
+    CENTOS) Installer hexedit ;;
+    DEBIAN) Installer aptitude ;;
+    UBUNTU) Installer openssh-client ;;
+    ARCHLINUX) Installer openssh ;;
+  esac
+}
+
+Install_Batch_vim()
+{
+  LogAs "\\nINSTALLING VIm"
   Installer vim
 
   ### Link vi to vim as default
@@ -455,6 +436,8 @@ Install_VIm()
   ### create a default vim profile
   cat >  $CHROOT/etc/skel/.vimrc << VIMRC
 runtime! vimrc_example.vim
+filetype indent on
+set autoindent
 set nobackup
 set noundofile
 set mouse=
@@ -462,53 +445,231 @@ set so=1
 VIMRC
 }
 
-Install_Chinese()
+Install_Batch_devel()
 {
-  LogAs "\\nINSTALLING Chinese and Japanese IME package"
-  case $CFG_IME in
-    ibus) #install the Chinese input method: IBus
-      case $CFG_SYS in
-	CENTOS) Installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
-        DEBIAN|UBUNTU) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
-	ARCHLINUX) Installer ibus ibus-qt ibus-libpinyin ibus-googlepinyin ibus-anthy ;;
-      esac ;;
-    fcitx) #install the Chinese input method: Fcitx
-      case $CFG_SYS in
-        CENTOS) Installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
-        DEBIAN|UBUNTU) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
-	ARCHLINUX) Installer fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc ;;
-      esac ;;
-    *) LogAs "INSTALLING Chinese and Japanese Fonts only" ;;
-  esac
-
-  # this font is for chinese subtitles in VLC
-  if test -e ./bin/DFKai-SB.7z; then
-    LogExec 7za x -o/usr/share/fonts ./bin/DFKai-SB.7z
-  fi
-
-  # install extra chinese fonts and japanese fonts
+  LogAs "\\nINSTALLING Basic Development packages (C/C++)"
   case $CFG_SYS in
-    CENTOS) 
-      Installer wqy-microhei-fonts cjkuni-ukai-fonts cjkuni-uming-fonts
-      Installer horai-ume-*-fonts ipa-*-fonts
+    CENTOS) Installer -g "Development Tools" ;;
+    DEBIAN|UBUNTU) Installer build-essential manpages-dev ;;
+    ARCHLINUX) Installer base-devel ;;
+  esac
+}
+
+Install_Batch_libffmpeg()
+{
+  LogAs "\\nINSTALLING ffmpeg and gd development packages"
+  case $CFG_SYS in
+    CENTOS) Installer ffms2-devel gd-devel ;;
+    DEBIAN|UBUNTU) Installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev ;;
+    ARCHLINUX) Installer ffmpeg gd ;;
+  esac
+}
+
+Install_Batch_freeimage()
+{
+  LogAs "\\nINSTALLING freeimage and SDL development packages"
+  case $CFG_SYS in
+    CENTOS) Installer freeimage-devel SDL-devel SDL_gfx-devel ;;
+    DEBIAN|UBUNTU) Installer libfreeimage-dev libsdl-dev libsdl-gfx1.2-dev ;;
+    ARCHLINUX) Installer sdl2 freeimage lsb_release ;;
+  esac
+}
+
+Install_Batch_devmore()
+{
+  LogAs "\\nINSTALLING more development packages"
+  Installer srecord autoconf libtool gdb
+}
+
+Install_Batch_pymore()
+{
+  local VOLUMN=""
+
+  LogAs "\\nINSTALLING Python related packages"
+  case $CFG_SYS in
+    CENTOS) VOLUMN="$VOLUMN python2-pip python-devel python-virtualenv"
+      VOLUMN="$VOLUMN python34-pip python34-devel python34-virtualenv"
+      VOLUMN="$VOLUMN scipy python34-scipy"
+      ;;
+    DEBIAN|UBUNTU) VOLUMN="$VOLUMN python-pip python-virtualenv python-sklearn-lib"
+      VOLUMN="$VOLUMN python-skimage-lib"
+      VOLUMN="$VOLUMN python3-pip python3-virtualenv python3-sklearn-lib"
+      ;;
+    ARCHLINUX) VOLUMN="$VOLUMN python-pip python2-pip python-virtualenv python2-virtualenv"
+      VOLUMN="$VOLUMN python-scipy python2-scipy python-scikit-learn python2-scikit-learn"
+      VOLUMN="$VOLUMN python-matplotlib python2-matplotlib"
+      ;;
+  esac
+  if test "$VOLUMN" != ""; then
+    Installer $VOLUMN
+  fi
+}
+
+
+#anonymous_enable=NO             # Disallow anonymous logins
+#local_enable=YES                # Enable local users to login
+#write_enable=YES                # local user to be able to write to a directory
+#chroot_local_user=YES           # Local users will be ‘chroot jailed’ and they 
+#                                # will be denied access to any other part of the server.
+Install_Batch_vsftpd()
+{
+  LogAs "\\nINSTALLING and cpnfiguring Vsftpd"
+
+  Installer vsftpd
+
+  LogExec mv -f /etc/vsftpd/vsftpd.conf /tmp/vsftpd.conf
+  if test "x$CHROOT" != x; then
+    LogAs "Configure the /etc/vsftpd/vsftpd.conf file"
+  else
+    sed -e 's/^[#]*anonymous_enable=.*/anonymous_enable=NO/g' \
+	    -e 's/^[#]*local_enable=.*/local_enable=YES/g' \
+	    -e 's/^[#]*write_enable=.*/write_enable=YES/g' \
+	    -e 's/^[#]*chroot_local_user=.*/chroot_local_user=YES/g' \
+	    /tmp/vsftpd.conf > /etc/vsftpd/vsftpd.conf
+    echo -e "\\npasv_enable=Yes\\npasv_max_port=10100\\npasv_min_port=10090\\n" \
+	    >> /etc/vsftpd/vsftpd.conf
+  fi
+  LogExec rm -f /tmp/vsftpd.conf
+
+  # First restart the service
+  LogExec systemctl restart vsftpd
+  # Then set the vsftpd service to start at boot
+  LogExec systemctl enable vsftpd
+
+  # Allow the default FTP port, port 21, through firewalld
+  LogExec firewall-cmd --permanent --add-port=21/tcp
+  # make sure it's public/  interfaces: eth0
+  LogExec firewall-cmd --get-active-zones
+  LogExec firewall-cmd --permanent --zone=public --add-port=10090-10100/tcp
+  # reload the firewall
+  LogExec firewall-cmd --reload
+
+  # Update the SELinux policy
+  LogExec setsebool -P ftpd_full_access 1
+  LogExec setsebool -P allow_ftpd_anon_write 1
+  LogExec setsebool -P ftpd_use_passive_mode 1
+  #getsebool -a | grep ftp
+}
+
+Install_Batch_bash()
+{
+  LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
+
+  cat >> $CHROOT/etc/skel/.bashrc << BASHRC
+# If not running interactively, don't do anything
+[[ \$- != *i* ]] && return
+
+PS1='\u:\w\\$ '
+
+ulimit -c unlimited
+
+PATH="\$PATH:\$HOME/bin:." 
+
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias grep='grep --color=auto'
+alias l.='ls -d .* --color=auto'
+alias ls='ls --color=auto'
+alias ll='ls -l --color=auto'
+alias path='echo \$PATH'
+
+BASHRC
+
+  case $CFG_SYS in
+    CENTOS)
+      echo "alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'" \
+	      >> $CHROOT/etc/skel/.bashrc
+      echo "" >> $CHROOT/etc/skel/.bashrc
       ;;
     DEBIAN|UBUNTU)
-      Installer fonts-arphic-ukai fonts-arphic-uming fonts-arphic-gkai00mp fonts-arphic-bkai00mp
-      Installer fonts-ipafont fonts-hanazono fonts-sawarabi-mincho
       ;;
     ARCHLINUX)
-      Installer wqy-bitmapfont wqy-microhei
-      Installer ttf-arphic-ukai ttf-arphic-uming opendesktop-fonts
-      Installer adobe-source-han-sans-cn-fonts adobe-source-han-serif-cn-fonts
-      Installer adobe-source-han-sans-tw-fonts adobe-source-han-serif-tw-fonts
-      Installer adobe-source-han-sans-jp-fonts adobe-source-han-serif-jp-fonts
-      Installer otf-ipafont ttf-hanazono  ttf-sazanami ttf-baekmuk
       ;;
   esac
 }
 
-Install_Firefox_Latest()
+Install_Batch_archlinux()
 {
+  if test "$CFG_SYS" != "ARCHLINUX"; then
+    return
+  fi
+
+  if test ! -L /etc/localtime; then
+    LogAs "\\nINSTALLING local time to Sydney, Australia"
+    LogExec ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
+    LogExec hwclock --systohc
+    LogAs "\\nINSTALLING Network Time Control"
+    LogExec timedatectl set-ntp true
+  fi
+  if test ! -e /etc/locale.conf; then
+    LogAs "\\nINSTALLING locale: Chinese included"
+    cat >> /etc/locale.gen << LOCALE
+
+en_US.UTF8 UTF-8
+zh_CN.UTF8 UTF-8
+zh_CN.GBK GBK
+zh_CN.GB2312 GB2312
+zh_CN.GB18030 GB18030
+
+LOCALE
+    LogExec locale-gen
+    LogExec echo "LANG=en_US.UTF-8" >> /etc/locale.conf
+  fi
+  if test ! -e /etc/hostname; then
+    LogAs "\\nINSTALLING hostname: $CFG_HOSTNAME.$CFG_DOMAIN"
+    echo "$CFG_HOSTNAME" > /etc/hostname
+    echo "127.0.0.1   $CFG_HOSTNAME.$CFG_DOMAIN $CFG_HOSTNAME" >> /etc/hosts
+  fi
+  if test ! -e /etc/sudoer; then
+    LogAs "\\nINSTALLING sudo"
+    Installer sudo
+    echo "%wheel    ALL=(ALL) ALL" >> /etc/sudoer
+  fi
+
+  LogAs "\\nINSTALLING the coredump in sysctl"
+  LogExec sysctl -w kernel.core_pattern="core"
+}
+
+
+Install_Batch_xinit()
+{
+  LogAs "\\nINSTALLING generic X Window tools"
+
+  # installing these tool according to their CLI countpart
+  if test -e /usr/bin/git; then
+    Installer qgit 
+  fi
+  if test -e /usr/bin/cc; then
+    Installer meld
+  fi
+
+  #### old style X fonts
+  #Installer xorg-fonts-100dpi xorg-fonts-75dpi
+  if test -e /usr/bin/vim; then
+    case $CFG_SYS in
+      CENTOS) Installer vim-X11 ;;
+      DEBIAN) Installer vim-gtk ;;
+      UBUNTU) Installer vim-gtk ;;
+      ARCHLINUX) Installer gvim ;;
+    esac
+  fi
+}
+
+Install_Batch_firefox()
+{
+  LogAs "\\nINSTALLING firefox in Repo"
+
+  case $CFG_SYS in
+    CENTOS) Installer firefox mozilla-ublock-origin mozilla-noscript mozilla-https-everywhere ;;
+    DEBIAN) Installer firefox-esr firefox-esr-ublock-origin firefox-esr-noscript firefox-esr-flashblock ;;
+    UBUNTU) Installer firefox;;
+    ARCHLINUX) Installer firefox;;
+  esac
+}
+
+Install_Batch_firefox_qtm()
+{
+  LogAs "\\nINSTALLING firefox quantum"
   if test "$CFG_SYS" = "UBUNTU"; then
     if test ! -e /etc/apt/sources.list.d/*-firefox-next-*; then
       # install firefox quantum repo
@@ -557,8 +718,20 @@ FIREFOX
   fi
 }
 
-Install_Google_Chrome()
+Install_Batch_chromium()
 {
+  LogAs "\\nINSTALLING Open Source Chromium"
+  case $CFG_SYS in
+    CENTOS) Installer chromium chromedriver chromium-pepper-flash chrome-remote-desktop ;;
+    DEBIAN) Installer chromium chromium-shell chromium-driver flashplayer-chromium ;;
+    UBUNTU) Installer chromium-browser chromium-chromedriver chromium-ublock-origin ;;
+    ARCHLINUX) ;;
+  esac
+}
+
+Install_Batch_chrome()
+{
+  LogAs "\\nINSTALLING Google Chrome"
   case $CFG_SYS in
     CENTOS)
       if test ! -e /etc/yum.repos.d/google.repo; then
@@ -619,10 +792,11 @@ GGLYUM
   Installer google-chrome-stable 
 }
 
-Install_Virtualbox()
+Install_Batch_virtualbox()
 {
   local DEFUSER=$(/bin/ls /home)
   
+  LogAs "\\nINSTALLING Oracle Repo Virtualbox"
   case $CFG_SYS in
     CENTOS) 
       Installer -g "Development Tools"
@@ -689,7 +863,7 @@ ORACLE
   fi
 }
 
-Install_VBGuest_Addition()
+Install_Batch_vbguest()
 {
   # FIXED: Most guest addition has problem with CentOS7.5/7.6. Only 5.2.x test builds work.
   # https://forums.virtualbox.org/viewtopic.php?f=3&t=87529
@@ -746,48 +920,223 @@ Install_VBGuest_Addition()
 }
 
 
-#anonymous_enable=NO             # Disallow anonymous logins
-#local_enable=YES                # Enable local users to login
-#write_enable=YES                # local user to be able to write to a directory
-#chroot_local_user=YES           # Local users will be ‘chroot jailed’ and they 
-#                                # will be denied access to any other part of the server.
-Install_Vsftpd()
+Install_Batch_kvmhost()
 {
-  Installer vsftpd
+  LogAs "\\nINSTALLING KVM/QEMU Hypervisor"
 
-  LogExec mv -f /etc/vsftpd/vsftpd.conf /tmp/vsftpd.conf
-  if test "x$CHROOT" != x; then
-    LogAs "Configure the /etc/vsftpd/vsftpd.conf file"
-  else
-    sed -e 's/^[#]*anonymous_enable=.*/anonymous_enable=NO/g' \
-	    -e 's/^[#]*local_enable=.*/local_enable=YES/g' \
-	    -e 's/^[#]*write_enable=.*/write_enable=YES/g' \
-	    -e 's/^[#]*chroot_local_user=.*/chroot_local_user=YES/g' \
-	    /tmp/vsftpd.conf > /etc/vsftpd/vsftpd.conf
-    echo -e "\\npasv_enable=Yes\\npasv_max_port=10100\\npasv_min_port=10090\\n" \
-	    >> /etc/vsftpd/vsftpd.conf
-  fi
-  LogExec rm -f /tmp/vsftpd.conf
-
-  # First restart the service
-  LogExec systemctl restart vsftpd
-  # Then set the vsftpd service to start at boot
-  LogExec systemctl enable vsftpd
-
-  # Allow the default FTP port, port 21, through firewalld
-  LogExec firewall-cmd --permanent --add-port=21/tcp
-  # make sure it's public/  interfaces: eth0
-  LogExec firewall-cmd --get-active-zones
-  LogExec firewall-cmd --permanent --zone=public --add-port=10090-10100/tcp
-  # reload the firewall
-  LogExec firewall-cmd --reload
-
-  # Update the SELinux policy
-  LogExec setsebool -P ftpd_full_access 1
-  LogExec setsebool -P allow_ftpd_anon_write 1
-  LogExec setsebool -P ftpd_use_passive_mode 1
-  #getsebool -a | grep ftp
+  case $CFG_SYS in
+    CENTOS) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 ;;
+    DEBIAN|UBUNTU) Installer qemu-kvm kvmtool ;;
+    ARCHLINUX) ;;
+  esac
 }
+
+Install_Batch_kvmguest()
+{
+  LogAs "\\nINSTALLING KVM Guest Configuration"
+
+  ToggleScreen xinit
+}
+
+Install_Batch_downloader()
+{
+  LogAs "\\nINSTALLING filezilla and qbittorrent"
+
+  Installer filezilla qbittorrent
+}
+
+Install_Batch_remotetty()
+{
+  LogAs "\\nINSTALLING remote terminal access"
+
+  local VOLUMN="putty"
+  case $CFG_SYS in
+    CENTOS) VOLUMN="$VOLUMN remmina remmina-plugins-vnc remmina-plugins-rdp" ;;
+    DEBIAN) 
+      VOLUMN="$VOLUMN vnc-viewer" 
+      if test -e /usr/bin/srecord; then
+        VOLUMN="$VOLUMN cutecom"
+      fi
+      ;;
+    UBUNTU) ;;
+    ARCHLINUX) ;;
+  esac
+  if test "x$VOLUMN" != "x"; then
+    Installer $VOLUMN
+  fi
+}
+
+Install_Batch_pidgin()
+{
+  LogAs "\\nINSTALLING pidgin and its plugins"
+
+  case $CFG_SYS in
+    CENTOS) Installer pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts ;;
+    DEBIAN) Installer pidgin pidgin-encryption pidgin-data pidgin-gnome-keyring pidgin-sipe ;;
+    UBUNTU) Installer pidgin pidgin-encryption pidgin-data pidgin-sipe pidgin-skype ;;
+    ARCHLINUX) ;;
+  esac
+}
+
+Install_Batch_picture()
+{
+  LogAs "\\nINSTALLING picture tools"
+
+  if test "x$CFG_GROUP_PIC" = "x"; then
+    Installer geeqie gthumb imagemagick
+  else
+    Installer $CFG_GROUP_PIC
+  fi
+}
+
+Install_Batch_cad()
+{
+  LogAs "\\nINSTALLING CAD tools"
+
+  if test "x$CFG_GROUP_CAD" = "x"; then
+    Installer librecad
+  else
+    Installer $CFG_GROUP_CAD
+  fi
+}
+  
+Install_Batch_vlc()
+{
+  LogAs "\\nINSTALLING VLC player"
+
+  case $CFG_SYS in
+    CENTOS) Installer vlc vlc-extras vlc-plugin-jack ;;
+    DEBIAN|UBUNTU) Installer vlc vlc-plugin-samba vlc-plugin-jack ;;
+    ARCHLINUX) ;;
+  esac
+
+  # this font is for chinese subtitles in VLC
+  if test ! -e /usr/share/fonts/kaiu_DFKai-SB.ttf; then
+    if test -e ./bin/DFKai-SB.7z; then
+      LogExec 7za x -o/usr/share/fonts ./bin/DFKai-SB.7z
+    fi
+  fi
+}
+
+Install_Batch_gstreamer()
+{
+  LogAs "\\nINSTALLING GStreamer Codecs"
+
+  local VOLUMN=""
+  case $CFG_SYS in
+    CENTOS) VOLUMN="$VOLUMN gstreamer gstreamer-ffmpeg gstreamer-plugins-base \
+      gstreamer-plugins-good gstreamer-plugins-bad gstreamer-plugins-bad-free \
+      gstreamer-plugins-bad-nonfree gstreamer-plugins-ugly gstreamer-plugins-base-tools \
+      gstreamer1 gstreamer1-libav gstreamer1-plugins-base gstreamer1-plugins-base-tools \
+      gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
+      gstreamer1-plugins-ugly gstreamer1-plugins-ugly-free"
+      ;;
+
+    DEBIAN|UBUNTU) VOLUMN="$VOLUMN gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-libav \
+      gstreamer1.0-plugins-bad gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+      gstreamer1.0-plugins-ugly gstreamer1.0-pulseaudio gstreamer1.0-tools"
+      ;;
+
+    ARCHLINUX) ;;
+  esac
+  if test "x$VOLUMN" != "x"; then
+    Installer $VOLUMN
+  fi
+}
+
+Install_Batch_office()
+{
+  LogAs "\\nINSTALLING Libre Office Suite"
+  case $CFG_SYS in
+    CENTOS|DEBIAN|UBUNTU) Installer libreoffice ;;
+    ARCHLINUX) Installer libreoffice-fresh ;;
+  esac
+}
+
+Install_Batch_eafont()
+{
+  LogAs "\\nINSTALLING East Asian fonts ($CFG_GROUP_EA_FONT)"
+  local VOLUMN=""
+  case $CFG_SYS in
+    CENTOS) VOLUMN="$VOLUMN wqy-microhei-fonts wqy-zenhei-fonts"
+      if test "$CFG_GROUP_EA_FONT" = "full"; then
+        VOLUMN="$VOLUMN cjkuni-ukai-fonts cjkuni-uming-fonts"
+	VOLUMN="$VOLUMN horai-ume-*-fonts ipa-*-fonts"
+      fi
+      ;;
+    DEBIAN|UBUNTU) VOLUMN="$VOLUMN fonts-wqy-microhei fonts-wqy-zenhei"
+      if test "$CFG_GROUP_EA_FONT" = "full"; then
+        VOLUMN="$VOLUMN fonts-arphic-ukai fonts-arphic-uming fonts-arphic-gkai00mp"
+	VOLUMN="$VOLUMN fonts-arphic-bkai00mp fonts-ipafont fonts-hanazono fonts-sawarabi-mincho"
+      fi
+      ;;
+    ARCHLINUX) VOLUMN="$VOLUMN wqy-zenhei wqy-microhei-lite"
+      if test "$CFG_GROUP_EA_FONT" = "full"; then
+        VOLUMN="$VOLUMN wqy-bitmapfont ttf-arphic-ukai ttf-arphic-uming opendesktop-fonts"
+	VOLUMN="$VOLUMN adobe-source-han-sans-cn-fonts adobe-source-han-serif-cn-fonts"
+	VOLUMN="$VOLUMN adobe-source-han-sans-tw-fonts adobe-source-han-serif-tw-fonts"
+	VOLUMN="$VOLUMN adobe-source-han-sans-jp-fonts adobe-source-han-serif-jp-fonts"
+	VOLUMN="$VOLUMN otf-ipafont ttf-hanazono  ttf-sazanami ttf-baekmuk"
+      fi
+      ;;
+  esac
+  if test "x$VOLUMN" != "x"; then
+    Installer $VOLUMN
+  fi
+}
+
+# This is a support function for installing IME
+Install_Batch_chinese()
+{
+  LogAs "\\nINSTALLING Chinese application adjustment"
+
+  # setting to support Chinese in pluma
+  if test -e /usr/bin/pluma; then
+    LogExec gsettings set org.mate.pluma auto-detected-encodings \
+       "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
+    LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+  fi
+
+  # setting to support Chinese in leafpad
+  if test -e /usr/bin/leafpad; then
+    LogExec mv -f /usr/bin/leafpad /usr/bin/leafpad-gui
+
+    cat > $CHROOT/usr/bin/leafpad << LEAFPAD
+#!/bin/sh
+/usr/bin/leafpad-gui --codeset=gbk \$*
+LEAFPAD
+    chmod 755 $CHROOT/usr/bin/leafpad
+  fi
+}
+
+Install_Batch_ibus()
+{
+  LogAs "\\nINSTALLING Chinese and Japanese IBUS package"
+  case $CFG_SYS in
+    CENTOS) Installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
+    DEBIAN|UBUNTU) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
+    ARCHLINUX) Installer ibus ibus-qt ibus-libpinyin ibus-googlepinyin ibus-anthy ;;
+  esac 
+
+  # install extra chinese fonts and japanese fonts
+  Install_Batch_eafont
+  Install_Batch_chinese
+}
+
+Install_Batch_fcitx()
+{
+  LogAs "\\nINSTALLING Chinese and Japanese Fcitx package"
+  case $CFG_SYS in
+    CENTOS) Installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
+    DEBIAN|UBUNTU) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
+    ARCHLINUX) Installer fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc ;;
+  esac 
+
+  # install extra chinese fonts and japanese fonts
+  Install_Batch_eafont
+  Install_Batch_chinese
+}
+
 
 Toggle_Touchpad()
 {
@@ -879,78 +1228,6 @@ XMON
   esac
 }
 
-
-Setup_Bash()
-{
-  LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
-
-  cat >> $CHROOT/etc/skel/.bashrc << BASHRC
-# If not running interactively, don't do anything
-[[ \$- != *i* ]] && return
-
-PS1='\u:\w\\$ '
-
-ulimit -c unlimited
-
-PATH="\$PATH:\$HOME/bin:." 
-
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias grep='grep --color=auto'
-alias l.='ls -d .* --color=auto'
-alias ls='ls --color=auto'
-alias ll='ls -l --color=auto'
-alias path='echo \$PATH'
-
-BASHRC
-
-  case $CFG_SYS in
-    CENTOS)
-      echo "alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'" \
-	      >> $CHROOT/etc/skel/.bashrc
-      echo "" >> $CHROOT/etc/skel/.bashrc
-      ;;
-    DEBIAN|UBUNTU)
-      ;;
-    ARCHLINUX)
-      ;;
-  esac
-}
-
-Setup_Archlinux()
-{
-  if test ! -L /etc/localtime; then
-    LogAs "\\nINSTALLING local time to Sydney, Australia"
-    LogExec ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime
-    LogExec hwclock --systohc
-    LogAs "\\nINSTALLING Network Time Control"
-    LogExec timedatectl set-ntp true
-  fi
-  if test ! -e /etc/locale.conf; then
-    LogAs "\\nINSTALLING locale: Chinese included"
-    cat >> /etc/locale.gen << LOCALE
-
-en_US.UTF8 UTF-8
-zh_CN.UTF8 UTF-8
-zh_CN.GBK GBK
-zh_CN.GB2312 GB2312
-zh_CN.GB18030 GB18030
-
-LOCALE
-    LogExec locale-gen
-    LogExec echo "LANG=en_US.UTF-8" >> /etc/locale.conf
-  fi
-  if test ! -e /etc/hostname; then
-    LogAs "\\nINSTALLING hostname: $CFG_HOSTNAME.$CFG_DOMAIN"
-    echo "$CFG_HOSTNAME" > /etc/hostname
-    echo "127.0.0.1   $CFG_HOSTNAME.$CFG_DOMAIN $CFG_HOSTNAME" >> /etc/hosts
-  fi
-  if test ! -e /etc/sudoer; then
-    LogAs "\\nINSTALLING sudo"
-    Installer sudo
-    echo "%wheel    ALL=(ALL) ALL" >> /etc/sudoer
-  fi
-}
 
 Repo_Update_CentOS()
 {
@@ -1064,16 +1341,11 @@ usage_exit()
 $0 [OPTION]
 OPTION:
   -d, --desktop     choose desktop [mate/xfce/lxde/cinnamon/gnome/kde]
-  -i, --ime         choose IME input method [ibus/fcitx]
-  -v, --vm          choose Virtual Machine type [none/vbox/vbgst/kvm/kgst]
+  -v, --vm          choose Virtual Machine type [none/vbguest/kvmguest]
+      --ime         choose IME method [ibus/fcitx]
+  -i, --install     quick installing packages
   -t, --touchpad    change the touchpad control [disable/on/off]
-      --vboxguest   quick install Virtualbox Guest Addition (insert iso first)
-      --vboxhost    quick install Virtualbox machine
-      --firefox     quick install the latest Firefox Quantum
-      --chrome      quick install the Google Chrome
       --screen      change screen size of client (qxl) [1920x1080/1280x1024/.../xinit]
-      --ime-ibus    quick install the Chinese/Japanese IME: ibus
-      --ime-fcitx   quick install the Chinese/Japanese IME: fcitx
       --packing     pack and transfer the mkvbox to VM host [only/down]
 
 my_usage
@@ -1090,7 +1362,20 @@ report_exit()
   exit $1
 }
 
+
+#############################################################################
+# main
+#############################################################################
 CFG_SYS=$(System)
+
+# enlist the quick install options
+# The front and end whitespace is needed
+CFG_INSTALL=" "
+for i in $(grep "^Install_Batch_.*()" $0);
+do
+  CFG_INSTALL="$CFG_INSTALL $(echo $i | cut -d_ -f3- | cut -d\( -f1)"
+done
+CFG_INSTALL="$CFG_INSTALL "
 
 # once for all in dry-run mode
 if test ! -d $CHROOT/etc/skel; then
@@ -1102,17 +1387,31 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     -h|--help) usage_exit;;
     -d|--desktop) CFG_DESKTOP="$2"; shift;;
-    -i|--ime) CFG_IME="$2"; shift;;
-    -v|--vm) CFG_VMCN="$2"; shift;;
+    -v|--vm)
+      if test -z "${CFG_INSTALL##* $2 *}"; then
+        CFG_VMCN="$2"; 
+      fi
+      shift;;
+    --ime)
+      if test -z "${CFG_INSTALL##* $2 *}"; then
+        CFG_IME="$2"; 
+      fi
+      shift;;
+
     -t|--touchpad) Toggle_Touchpad $2; exit 0;;
-    --vboxguest) Install_VBGuest_Addition; exit 0;;
-    --vboxhost) Install_Virtualbox; exit 0;;
-    --firefox) Install_Firefox_Latest; exit 0;;
-    --chrome) Install_Google_Chrome; exit 0;;
     --screen) ToggleScreen "$2"; exit 0;;
-    --ime-ibus) CFG_IME=ibus; Install_Chinese; exit 0;;
-    --ime-fcitx) CFG_IME=fcitx; Install_Chinese; exit 0;;
     --packing) Packing $2; exit 0;;
+
+    -i|--install) 
+      if test "x$2" = "x"; then
+        echo Option: $CFG_INSTALL
+      elif test -z "${CFG_INSTALL##* $2 *}"; then
+        Install_Batch_$2
+      else
+        echo Quick installation option [$2] not found!
+      fi
+      exit 0
+      ;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;
@@ -1120,8 +1419,21 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+# verify the configure options to make sure they will be installed
+if test "x$CFG_VMCN" != "x"; then
+  if test ! -z "${CFG_GUI##* $CFG_VMCN *}"; then
+    CFG_GUI="$CFG_GUI $CFG_VMCN"
+  fi
+fi
+if test "x$CFG_IME" != "x"; then
+  if test ! -z "${CFG_GUI##* $CFG_IME *}"; then
+    CFG_GUI="$CFG_GUI $CFG_IME"
+  fi
+fi
+
 # wipe clean the log file
 echo "$CFG_SYS Installation on $(date)" > $CFG_LOG
+LogAs "Package choosed: $CFG_CLI $CFG_GUI"
 
 case $CFG_SYS in
   CENTOS) Repo_Update_CentOS ;;
@@ -1133,36 +1445,12 @@ case $CFG_SYS in
      exit 2;;
 esac
 
-#install vim
-Install_VIm
-
-#install the C/C++ tool chains
-if test "$CFG_CC" = "yes"; then
-  case $CFG_SYS in
-    CENTOS) Installer -g "Development Tools" ;;
-    DEBIAN|UBUNTU) Installer build-essential manpages-dev ;;
-    ARCHLINUX) Installer base-devel ;;
-  esac
-fi
-
 #install the command line applications
-Installer $CFG_CLI
-case $CFG_SYS in
-  CENTOS) Installer $CFG_CLI_CENTOS ;;
-  DEBIAN) Installer $CFG_CLI_DEBIAN ;;
-  UBUNTU) Installer $CFG_CLI_UBUNTU ;;
-  ARCHLINUX) Installer $CFG_CLI_ARCHLINUX ;;
-esac
+for i in $(echo $CFG_CLI);
+do
+  Install_Batch_$i
+done
 
-# setting the bash
-Setup_Bash
-
-LogAs "\\nINSTALLING the coredump in sysctl"
-LogExec sysctl -w kernel.core_pattern="core"
-
-if test "$CFG_SYS" = "ARCHLINUX"; then
-  Setup_Archlinux
-fi
 
 #############################################################################
 # install the X11 desktop environment
@@ -1190,34 +1478,12 @@ case $CFG_DESKTOP in
   mate|*) Install_Desktop_Mate ;;
 esac
 
-# install extra chinese fonts and japanese fonts
-if test ! "x$CFG_IME" = "x"; then
-  Install_Chinese
-fi
-
-#install the Virtualbox or Guest Addition
-case $CFG_VMCN in
-  vbox) Install_Virtualbox ;;
-  vbgst) Install_VBGuest_Addition ;;
-  kvm) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 ;;
-  kgst) ToggleScreen xinit ;;
-esac
-
 # install desktop application
-Installer $CFG_GUI
-case $CFG_SYS in
-  CENTOS) Installer $CFG_GUI_CENTOS ;;
-  DEBIAN) Installer $CFG_GUI_DEBIAN ;;
-esac
+for i in $(echo $CFG_GUI);
+do
+  Install_Batch_$i
+done
 
-#install the additional browsers
-if test "$CFG_WEB" = "firefox-quantum"; then
-  Install_Firefox_Latest
-elif test "$CFG_WEB" = "chrome"; then
-  Install_Google_Chrome
-elif test "$CFG_WEB" != ""; then
-  Installer $CFG_WEB
-fi
 
 #############################################################################
 # Setup Extra repos
