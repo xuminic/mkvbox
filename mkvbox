@@ -1,52 +1,4 @@
 #!/bin/bash
-# Installation:
-#  1. minimem installation with root only 
-#
-# ARCHLINUX Installation:
-#  1. fdisk /dev/sda
-#  2. mkfs.ext4 /dev/sda1
-#  3. mount /dev/sda1 /mnt
-#  4. vi /etc/pacman.d/mirrorlist
-#  5. pacstrap /mnt base
-#  6. genfstab -U /mnt >> /mnt/etc/fstab
-#  7. arch-chroot /mnt
-#  8. cp /etc/netctl/examples/ethernet-dhcp /etc/netctl/
-#  9. vi /etc/netctl/ethernet-dhcp
-#     Interface=enp0s3
-# 10. netctl enable ethernet-dhcp
-# 11. passwd root
-# 12. pacman -S grub
-# 13. grub-install --target=i386-pc /dev/sda
-# 14. grub-mkconfig -o /boot/grub/grub.cfg
-#
-# Using the Installer script:
-#  1. install git
-#  2. git clone https://github.com/xuminic/mkvbox.git
-#  3. run 'hatch'
-#
-# Notes:
-#  * matplotlib requires python-dev
-#  * gstreamer1-vaapi seems a trouble maker
-#  * CENTOS: Xfce need to be explictly chosen when logining
-#
-# Issue:
-#  * MATE was broken by EPEL repo in CentOS 7.
-#    libwebkitgtk was removed so it broke the atril; test repo can fix it.
-#    https://bugzilla.redhat.com/show_bug.cgi?id=1589486
-#  * Virtualbox Guest Addition has problem with CentOS7.5/7.6 Debian 9.
-#    CentOS 7 needs 5.2.x test builds at least
-#    Debian 9 needs 5.2.8 at least
-#  * Neither of Virtualbox Guest Addition in Ubuntu and Archlinux repo worked
-#    reliably so let's just stay focus on Oracle releases.
-#  * Ubuntu 18/Mate includes ibus in default so fcitx may not run.
-#    [Updated] Seems fcitx not functional in all distribution.
-#
-# FIXME:
-#  * Debian should check key before download the repo key.
-#  * Archlinux keeps freezing in desktop panel applets
-#
-# History:
-#
 
 #############################################################################
 # Configure
@@ -1092,9 +1044,9 @@ Install_Batch_chinese()
 
   # setting to support Chinese in pluma
   if test -e /usr/bin/pluma; then
-    LogExec gsettings set org.mate.pluma auto-detected-encodings \
+    gsettings set org.mate.pluma auto-detected-encodings \
        "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-    LogExec gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+    gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
   fi
 
   # setting to support Chinese in leafpad
@@ -1120,7 +1072,7 @@ Install_Batch_ibus()
 
   # install extra chinese fonts and japanese fonts
   Install_Batch_eafont
-  Install_Batch_chinese
+  #Install_Batch_chinese
 }
 
 Install_Batch_fcitx()
@@ -1134,7 +1086,7 @@ Install_Batch_fcitx()
 
   # install extra chinese fonts and japanese fonts
   Install_Batch_eafont
-  Install_Batch_chinese
+  #Install_Batch_chinese
 }
 
 
@@ -1237,11 +1189,17 @@ Repo_Update_CentOS()
   Installer epel-release
 
   #install Nux Dextop
-  LogExec rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
+  if test ! -e /etc/yum.repos.d/nux-dextop.repo; then
+    LogExec rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
+  fi
 
   #install RPM Fusion
-  LogExec rpm -Uvh https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
-  LogExec rpm -Uvh https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
+  if test ! -e /etc/yum.repos.d/rpmfusion-free-updates.repo; then
+    LogExec rpm -Uvh https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm
+  fi
+  if test ! -e /etc/yum.repos.d/rpmfusion-nonfree-updates.repo; then
+    LogExec rpm -Uvh https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
+  fi
 
   #update and upgrade to the newest releases
   LogExec yum -y update
@@ -1497,3 +1455,61 @@ done
 # Setup the useful scripts
 #############################################################################
 report_exit 0
+
+
+#############################################################################
+# Document, Issue and History
+#############################################################################
+# Installation:
+#  1. minimem installation with root only 
+#
+# ARCHLINUX Installation:
+#  1. fdisk /dev/sda
+#  2. mkfs.ext4 /dev/sda1
+#  3. mount /dev/sda1 /mnt
+#  4. vi /etc/pacman.d/mirrorlist
+#  5. pacstrap /mnt base
+#  6. genfstab -U /mnt >> /mnt/etc/fstab
+#  7. arch-chroot /mnt
+#  8. cp /etc/netctl/examples/ethernet-dhcp /etc/netctl/
+#  9. vi /etc/netctl/ethernet-dhcp
+#     Interface=enp0s3
+# 10. netctl enable ethernet-dhcp
+# 11. passwd root
+# 12. pacman -S grub
+# 13. grub-install --target=i386-pc /dev/sda
+# 14. grub-mkconfig -o /boot/grub/grub.cfg
+#
+# Using the Installer script:
+#  1. install git
+#  2. git clone https://github.com/xuminic/mkvbox.git
+#  3. run 'hatch'
+#
+# Notes:
+#  * matplotlib requires python-dev
+#  * gstreamer1-vaapi seems a trouble maker
+#  * CENTOS: Xfce need to be explictly chosen when logining
+#
+# Issue:
+#  * MATE was broken by EPEL repo in CentOS 7.
+#    libwebkitgtk was removed so it broke the atril; test repo can fix it.
+#    https://bugzilla.redhat.com/show_bug.cgi?id=1589486
+#  * Virtualbox Guest Addition has problem with CentOS7.5/7.6 Debian 9.
+#    CentOS 7 needs 5.2.x test builds at least
+#    Debian 9 needs 5.2.8 at least
+#  * Neither of Virtualbox Guest Addition in Ubuntu and Archlinux repo worked
+#    reliably so let's just stay focus on Oracle releases.
+#  * Ubuntu 18/Mate includes ibus in default so fcitx may not run.
+#    [Updated] Seems fcitx not functional in all distribution.
+#  * The source of the string magic [! -z "${CFG_GUI##* $CFG_VMCN *}"] is
+#    https://stackoverflow.com/questions/918886/how-do-i-split-a-string-on-a-delimiter-in-bash
+#  * Disabled Install_Batch_chinese() because gsettings require a run X session
+#    However it can be invoked by "-i chinese" later.
+#
+# FIXME:
+#  * Debian should check key before download the repo key.
+#  * Archlinux keeps freezing in desktop panel applets
+#
+# History:
+#
+
