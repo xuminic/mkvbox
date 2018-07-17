@@ -177,7 +177,9 @@ list_iommu()
     done
 }
 
-list_vmdisk()
+
+# $1: [-s|-d]  $2: disk image
+vmdisk_list()
 {
   if test -e $2; then
     if test "$1" = "-s"; then
@@ -200,6 +202,70 @@ list_vmdisk()
   fi
 }
 
+# $1: disk image
+# https://en.wikibooks.org/wiki/QEMU
+# assuming the running kernel support auto max partition in loop device.
+# assuming nbd module is available with the running kernel
+# assuming there's no lvm partition
+vmdisk_mount()
+{
+  case "$1" in
+    *.raw)
+      losetup -f -P $1
+      if test "$?" != "0"; then
+        return
+      fi
+      for i in /dev/loop0p*
+      do
+        mkdir /media/$(basename $i)
+	mount $i /media/$(basename $i)
+      done
+      ;;
+    *.qcow2)
+      modprobe nbd max_part=16
+      qemu-nbd -c /dev/nbd0 $1
+      partprobe -s /dev/nbd0
+      for i in /dev/nbd0p*
+      do
+        mkdir /media/$(basename $i)
+	mount $i /media/$(basename $i)
+      done
+      ;;
+    *) echo Unrecognized disk image.
+      ;;
+  esac
+}
+
+# $1: disk image
+vmdisk_umount()
+{
+  case "$1" in
+    *.raw)
+      for i in /dev/loop0p*
+      do
+        if test -e /media/$(basename $i); then
+	  umount /media/$(basename $i)
+	  rmdir /media/$(basename $i)
+	fi
+      done
+      losetup -D
+      ;;
+    *.qcow2)
+      for i in /dev/nbd0p*
+      do
+        if test -e /media/$(basename $i); then
+	  umount /media/$(basename $i)
+	  rmdir /media/$(basename $i)
+	fi
+      done
+      qemu-nbd -d /dev/nbd0
+      killall qemu-nbd
+      ;;
+    *) echo Unrecognized disk image.
+      ;;
+  esac
+}
+
 usage_exit()
 {
     cat << my_usage
@@ -211,6 +277,8 @@ OPTION:
       --iommu                List the IOMMU Group
       --snapshot             List the known snapshots
       --vmdisk               List the VM disk volumn
+      --mount                Mount the VM disk image
+      --umount               Umount the VM disk image
 
 KVM_IMAGE_NAME is the base name of the KVM virtual machine.
 The correspondent image is KVM_IMAGE_NAME_hda.kvm.
@@ -237,8 +305,11 @@ while [ "$#" -gt 0 ]; do
 
     --iommu) list_iommu; exit 0;;
 
-    --snapshot) list_vmdisk -s $2; exit 0;;
-    --vmdisk)   list_vmdisk -d $2; exit 0;;
+    --snapshot) vmdisk_list -s $2; exit 0;;
+    --vmdisk)   vmdisk_list -d $2; exit 0;;
+
+    --mount) vmdisk_mount $2; exit 0;;
+    --umount) vmdisk_umount $2; exit 0;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;

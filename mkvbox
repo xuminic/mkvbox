@@ -1042,13 +1042,6 @@ Install_Batch_chinese()
 {
   LogAs "\\nINSTALLING Chinese application adjustment"
 
-  # setting to support Chinese in pluma
-  if test -e /usr/bin/pluma; then
-    gsettings set org.mate.pluma auto-detected-encodings \
-       "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
-    gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
-  fi
-
   # setting to support Chinese in leafpad
   if test -e /usr/bin/leafpad; then
     LogExec mv -f /usr/bin/leafpad /usr/bin/leafpad-gui
@@ -1072,7 +1065,7 @@ Install_Batch_ibus()
 
   # install extra chinese fonts and japanese fonts
   Install_Batch_eafont
-  #Install_Batch_chinese
+  Install_Batch_chinese
 }
 
 Install_Batch_fcitx()
@@ -1086,7 +1079,7 @@ Install_Batch_fcitx()
 
   # install extra chinese fonts and japanese fonts
   Install_Batch_eafont
-  #Install_Batch_chinese
+  Install_Batch_chinese
 }
 
 
@@ -1503,8 +1496,9 @@ report_exit 0
 #    [Updated] Seems fcitx not functional in all distribution.
 #  * The source of the string magic [! -z "${CFG_GUI##* $CFG_VMCN *}"] is
 #    https://stackoverflow.com/questions/918886/how-do-i-split-a-string-on-a-delimiter-in-bash
-#  * Disabled Install_Batch_chinese() because gsettings require a run X session
-#    However it can be invoked by "-i chinese" later.
+#  * Relocated the gsettings of pluma from Install_Batch_chinese() to user.sh because 
+#    gsettings require a run X session and it's a per-user based configuration.
+#    
 #
 # FIXME:
 #  * Debian should check key before download the repo key.

@@ -4,6 +4,15 @@ if test ! -d $HOME/bin; then
   mkdir -p $HOME/bin
 fi
 
+# setting to support Chinese in pluma
+if test -e /usr/bin/ibus || test -e /usr/bin/fcitx; then
+  if test -e /usr/bin/pluma; then
+    gsettings set org.mate.pluma auto-detected-encodings \
+       "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
+    gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
+  fi
+fi
+
 # Initial my git reference
 git config --global user.name "Andy Xuming"
 git config --global user.email "xuming@users.sf.net"
