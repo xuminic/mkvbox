@@ -5,6 +5,9 @@
 # * q35 and pc machine types have different PCI bus layout so ethernet/cdrom/boot
 #   will be involved.
 # * can not using "-cpu host,kvm=off" option because Property '.kvm' not found
+#   You need at least 2.1 for the kvm=off property.
+# * global variable can not be changed inside subshell access, ie, $(func arg)
+#   https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
 #
 
 # debug only
@@ -17,6 +20,7 @@ CFG_ISO=
 CFG_HDS=16G
 CFG_RAM=2G
 CFG_SCREEN=sdl     	# sdl/spice
+CFG_SMB=~/Public
 
 #############################################################################
 # System definition
@@ -29,7 +33,9 @@ VMHDD=""
 #VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
 #          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
 VMVIDEO="-vga qxl"
-VMIOMMU="-machine q35,accel=kvm -cpu host -smp 2,sockets=1,cores=1,threads=2"
+
+VMIOMMU="-enable-kvm -machine q35,accel=kvm -cpu host -smp 2,sockets=1,cores=1,threads=2"
+
 VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
 
 VMMOUSE="-usb -device usb-tablet"
@@ -37,7 +43,7 @@ VMSPICE="-device virtio-serial-pci -soundhw hda \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
 	-chardev spicevmc,id=spicechannel0,name=vdagent"
 
-VMFLAGS="-enable-kvm $VMIOMMU $VMVIDEO -m $CFG_RAM $VMRNG"
+VMFLAGS="$VMIOMMU $VMVIDEO -m $CFG_RAM $VMRNG"
 
 
 #############################################################################
@@ -121,7 +127,11 @@ add_nic()
 
     local nhash=$(echo $1|md5sum)
     local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
-    echo "-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
+    local ndev="-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
+    if test "$CFG_SMB" != ""; then
+      ndev="-net user,smb=$CFG_SMB $ndev"
+    fi
+    echo $ndev
 }
 
 

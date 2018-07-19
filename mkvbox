@@ -354,7 +354,7 @@ Install_Batch_cli()
   LogAs "\\nINSTALLING generic CLI tools"
 
   #### ifconfig/lspci/samba/... always needed
-  Installer net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio
+  Installer net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio bc
   case $CFG_SYS in
     CENTOS) Installer hexedit ;;
     DEBIAN) Installer aptitude ;;
@@ -927,8 +927,8 @@ Install_Batch_kvmhost()
   LogAs "\\nINSTALLING KVM/QEMU Hypervisor"
 
   case $CFG_SYS in
-    CENTOS) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 ;;
-    DEBIAN|UBUNTU) Installer qemu-kvm kvmtool ;;
+    CENTOS) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 virt-viewer ;;
+    DEBIAN|UBUNTU) Installer qemu-kvm kvmtool virt-viewer ;;
     ARCHLINUX) ;;
   esac
 }
