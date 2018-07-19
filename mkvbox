@@ -582,6 +582,56 @@ LOCALE
   LogExec sysctl -w kernel.core_pattern="core"
 }
 
+Install_Batch_eth0()
+{
+  # Note that in the document
+  # https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames
+  # whilst those three options only the last one, kernel command line, works (debian 9)
+  LogAs "\\nINSTALLING traditional network interface eth0"
+
+  ip link | grep eth0 > /dev/null
+  if test "$?" = "0"; then
+    LogAs "Traditional 'eth0' interface is found."
+    return
+  fi
+
+  LogExec mv -f /etc/default/grub /tmp/grub
+  if test "x$CHROOT" != x; then
+    LogAs "Disabling the Predictable Network Interface Names"
+  else
+    sed -e 's/^[#]*GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"net.ifnames=0 /' \
+	    /tmp/grub > /etc/default/grub
+    LogExec update-grub
+  fi
+  LogExec rm -f /tmp/grub
+
+  case $CFG_SYS in
+    CENTOS)
+      if test -e /etc/sysconfig/network-scripts/ifcfg-eth0; then
+        LogAs "Interface 'eth0' is already configured."
+      elif test "x$CHROOT" != x; then
+        LogAs "Restore eth0 interface in $CFG_SYS"
+      else
+        sed -e 's/NAME=.*/NAME="eth0"/g' \
+		-e 's/DEVICE=.*/DEVICE="eth0"/g' \
+		/etc/sysconfig/network-scripts/ifcfg-en* > /etc/sysconfig/network-scripts/ifcfg-eth0
+      fi
+      ;;
+    DEBIAN)
+      LogExec mv -f /etc/network/interfaces /tmp/interfaces
+      if test "x$CHROOT" != x; then
+	LogAs "Restore eth0 interface in $CFG_SYS"
+      else
+        sed -e 's/allow-hotplug.*/allow-hotplug eth0/g' \
+	       -e 's/iface en.*/iface eth0 inet dhcp/g' \
+	       /tmp/interfaces > /etc/network/interfaces
+      fi
+      LogExec rm -f /tmp/interfaces
+      ;;
+    UBUNTU) ;;
+    ARCHLINUX) ;;
+  esac
+}
 
 Install_Batch_xinit()
 {
@@ -623,7 +673,7 @@ Install_Batch_firefox_qtm()
 {
   LogAs "\\nINSTALLING firefox quantum"
   if test "$CFG_SYS" = "UBUNTU"; then
-    if test ! -e /etc/apt/sources.list.d/*-firefox-next-*; then
+    if test ! -e "/etc/apt/sources.list.d/*-firefox-next-*"; then
       # install firefox quantum repo
       Installer software-properties-common
       LogExec add-apt-repository -y ppa:mozillateam/firefox-next
@@ -636,7 +686,7 @@ Install_Batch_firefox_qtm()
   LogExec wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
 
   local FFOX=firefox-*
-  if test ! -e $FFOX; then
+  if test ! -e "$FFOX"; then
     LogAs "ERROR: firefox not downloaded!"
     exit
   fi
@@ -865,7 +915,7 @@ Install_Batch_vbguest()
     LogExec chmod 755 /root/VBoxLinuxAdditions.run
     LogExec /root/VBoxLinuxAdditions.run
 
-    if test "x$?" = "x0" -a "x$DEFUSER" != "x"; then
+    if test "$?" = "0" -a "$DEFUSER" != ""; then
       LogExec usermod -a -G vboxsf $DEFUSER
     fi
   fi
@@ -887,7 +937,8 @@ Install_Batch_kvmguest()
 {
   LogAs "\\nINSTALLING KVM Guest Configuration"
 
-  ToggleScreen xinit
+  Toggle_Screen xinit
+  Installer spice-vdagent
 }
 
 Install_Batch_downloader()
@@ -913,7 +964,7 @@ Install_Batch_remotetty()
     UBUNTU) ;;
     ARCHLINUX) ;;
   esac
-  if test "x$VOLUMN" != "x"; then
+  if test "$VOLUMN" != ""; then
     Installer $VOLUMN
   fi
 }
@@ -934,7 +985,7 @@ Install_Batch_picture()
 {
   LogAs "\\nINSTALLING picture tools"
 
-  if test "x$CFG_GROUP_PIC" = "x"; then
+  if test "$CFG_GROUP_PIC" = ""; then
     Installer geeqie gthumb imagemagick
   else
     Installer $CFG_GROUP_PIC
@@ -945,7 +996,7 @@ Install_Batch_cad()
 {
   LogAs "\\nINSTALLING CAD tools"
 
-  if test "x$CFG_GROUP_CAD" = "x"; then
+  if test "$CFG_GROUP_CAD" = ""; then
     Installer librecad
   else
     Installer $CFG_GROUP_CAD
@@ -991,7 +1042,7 @@ Install_Batch_gstreamer()
 
     ARCHLINUX) ;;
   esac
-  if test "x$VOLUMN" != "x"; then
+  if test "$VOLUMN" != ""; then
     Installer $VOLUMN
   fi
 }
@@ -1032,7 +1083,7 @@ Install_Batch_eafont()
       fi
       ;;
   esac
-  if test "x$VOLUMN" != "x"; then
+  if test "$VOLUMN" != ""; then
     Installer $VOLUMN
   fi
 }
@@ -1108,7 +1159,7 @@ Toggle_Touchpad()
       ;;
     *)
       local ConfID="/usr/share/X11/xorg.conf.d/*-synaptics.conf"
-      if test ! -e $ConfID; then
+      if test ! -e "$ConfID"; then
         ConfID="/usr/share/X11/xorg.conf.d/20-synaptics.conf"
       fi
 
@@ -1130,7 +1181,7 @@ TPADOFF
 }
 
 
-ToggleScreen()
+Toggle_Screen()
 {
   case $1 in
     1920x1080) xrandr --output Virtual-0 --mode 1920x1080 ;;
@@ -1139,20 +1190,24 @@ ToggleScreen()
 
     xinit)
       local DEVNAME="/usr/share/X11/xorg.conf.d/10-monitor.conf"
-      if test -e $DEVNAME; then
-        echo Found $DEVNAME! Please add modelines manually
+      LogAs "Adding modeline to $DEVNAME"
+      if test -e "$DEVNAME"; then
+        LogAs "Found $DEVNAME! Please add modelines manually!"
         DEVNAME=/dev/stdout
       fi
 
       cat > $DEVNAME << XMON
+# The host screen is 1920x1080, so
+# In QEMU/SDL window, the preferred solution is 1920x940
+# In QEMU/SPICE/remote-viewer window, the preferred solution is 1912x936
 Section "Monitor"
     Identifier "Virtual-0 "
     Modeline "1920x960_60.00"  152.00  1920 2032 2232 2544  960 963 973 996 -hsync +vsync
     Modeline "1920x940_60.00"  148.75  1920 2032 2232 2544  940 943 953 976 -hsync +vsync
     Modeline "1920x800_60.00"  125.00  1920 2024 2216 2512  800 803 813 831 -hsync +vsync
-    Modeline "1912x960_60.00"  151.50  1912 2024 2224 2536  960 963 973 996 -hsync +vsync
+    Modeline "1912x936_60.00"  147.75  1912 2024 2224 2536  936 939 949 972 -hsync +vsync
     Modeline "1912x800_60.00"  124.75  1912 2016 2208 2504  800 803 813 831 -hsync +vsync
-    Option "PreferredMode" "1920x940_60.00"
+    Option "PreferredMode" "1912x936_60.00"
 EndSection
 
 XMON
@@ -1223,11 +1278,11 @@ Repo_Update_Debian()
     LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
     if ! test "x$?" = "x0"; then
       # the backup plan for deb-multimedia keyring
-      if test -e ./bin/$keyring; then
+      if test -e "./bin/$keyring"; then
         LogExec dpkg -i ./bin/$keyring
       else
         LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
-        if test -e $keyring; then
+        if test -e "$keyring"; then
           LogExec dpkg -i $keyring
         fi
       fi
@@ -1329,7 +1384,7 @@ done
 CFG_INSTALL="$CFG_INSTALL "
 
 # once for all in dry-run mode
-if test ! -d $CHROOT/etc/skel; then
+if test ! -d "$CHROOT/etc/skel"; then
   mkdir -p $CHROOT/etc/skel
   mkdir -p $CHROOT/usr/bin
 fi
@@ -1350,12 +1405,12 @@ while [ "$#" -gt 0 ]; do
       shift;;
 
     -t|--touchpad) Toggle_Touchpad $2; exit 0;;
-    --screen) ToggleScreen "$2"; exit 0;;
+    --screen) Toggle_Screen "$2"; exit 0;;
     --packing) Packing $2; exit 0;;
 
     -i|--install) 
       if test "x$2" = "x"; then
-        echo Option: $CFG_INSTALL
+        echo Option: $CFG_INSTALL | fold -s -w $(tput cols)
       elif test -z "${CFG_INSTALL##* $2 *}"; then
         Install_Batch_$2
       else
@@ -1498,7 +1553,12 @@ report_exit 0
 #    https://stackoverflow.com/questions/918886/how-do-i-split-a-string-on-a-delimiter-in-bash
 #  * Relocated the gsettings of pluma from Install_Batch_chinese() to user.sh because 
 #    gsettings require a run X session and it's a per-user based configuration.
-#    
+#  * The Predictable Network Interface Names caused the ethernet interface name
+#    unpredicatble in VM when machine types, buses, devices, etc. changes.
+#    The Install_Batch_eth0() should restore the traditional eth0 interface instead.
+#    Some command may help diagnostic: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=799253
+#      ls -lR /sys/bus/virtio/drivers/virtio_net/
+#      udevadm info --export-db
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
