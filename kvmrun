@@ -20,7 +20,6 @@ CFG_ISO=
 CFG_HDS=16G
 CFG_RAM=2G
 CFG_SCREEN=sdl     	# sdl/spice
-CFG_SMB=~/Public
 
 #############################################################################
 # System definition
@@ -128,9 +127,9 @@ add_nic()
     local nhash=$(echo $1|md5sum)
     local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
     local ndev="-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
-    if test "$CFG_SMB" != ""; then
-      ndev="-net user,smb=$CFG_SMB $ndev"
-    fi
+    #if test "$CFG_SMB" != ""; then
+    #  ndev="-net user,smb=$CFG_SMB $ndev"
+    #fi
     echo $ndev
 }
 
