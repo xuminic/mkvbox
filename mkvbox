@@ -34,7 +34,7 @@ CFG_CLI="$CFG_CLI archlinux"
 # install X11 GUI tools
 #############################################################################
 #### old style X fonts
-CFG_GUI="xinit"
+CFG_GUI="xinit pulsea"
 
 #### browers
 #CFG_GUI="$CFG_GUI firefox
@@ -767,6 +767,18 @@ Install_Batch_xinit()
       ARCHLINUX) Installer gvim ;;
     esac
   fi
+}
+
+Install_Batch_pulseaudio()
+{
+  local VOLUMN="pulseaudio"
+
+  LogAs "\\nINSTALLING PulseAudio"
+
+  case $CFG_SYS in
+    CENTOS) VOLUMN="$VOLUMN pulseaudio-utils pulseaudio-qpaeq pavucontrol" ;;
+  esac
+  Installer $VOLUMN
 }
 
 Install_Batch_firefox()
