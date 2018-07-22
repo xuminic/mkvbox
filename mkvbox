@@ -694,6 +694,21 @@ LOCALE
   LogExec sysctl -w kernel.core_pattern="core"
 }
 
+Install_Batch_skel()
+{
+  LogExec cp /etc/skel/.bashrc /etc/skel/.vimrc ~
+
+  if test $(id -u) = 0 -a "$1" = "-a"; then
+    LogAs "\\nINSTALLING scripts in /etc/skel to all users"
+    local DEFUSER=$(grep '/home/' /etc/passwd | cut -f1 -d':')
+    for i in $DEFUSER; do
+      LogExec sudo -u $i cp /etc/skel/.bashrc /etc/skel/.vimrc /home/$i
+    done
+  else
+    LogAs "\\nINSTALLING scripts in /etc/skel"
+  fi
+}
+
 Install_Batch_eth0()
 {
   # Note that in the document
@@ -809,7 +824,7 @@ Install_Batch_firefox_qtm()
 
   LogExec wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
 
-  local FFOX=firefox-*
+  local FFOX=$(ls firefox-*)
   if test ! -e "$FFOX"; then
     LogAs "ERROR: firefox not downloaded!"
     exit
@@ -1536,7 +1551,7 @@ while [ "$#" -gt 0 ]; do
       if test "x$2" = "x"; then
         echo Option: $CFG_INSTALL | fold -s -w $(tput cols)
       elif test -z "${CFG_INSTALL##* $2 *}"; then
-        Install_Batch_$2
+        Install_Batch_$2 $3 $4 $5 $6 $7 $8 $9
       else
         echo Quick installation option [$2] not found!
       fi
@@ -1626,6 +1641,7 @@ done
 #############################################################################
 # Setup the useful scripts
 #############################################################################
+Install_Batch_skel -a
 report_exit 0
 
 
