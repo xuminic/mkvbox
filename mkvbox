@@ -948,6 +948,7 @@ Install_Batch_pulsa()
 
   case $CFG_SYS in
     CENTOS) VOLUMN="$VOLUMN pulseaudio-utils pulseaudio-qpaeq pavucontrol" ;;
+    *) VOLUMN="$VOLUMN pulseaudio-utils pavucontrol" ;;
   esac
   Installer $VOLUMN
 }
@@ -1237,6 +1238,7 @@ Install_Batch_kvmguest()
 
   Toggle_Screen xinit
   Installer spice-vdagent
+  Install_Batch_eth0
 }
 
 Install_Batch_downloader()
