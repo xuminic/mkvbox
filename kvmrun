@@ -127,7 +127,7 @@ add_nic()
     local nhash=$(echo $1|md5sum)
     local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
     local ndev="-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
-    #if test "$CFG_SMB" != ""; then
+    #if test "x$CFG_SMB" != "x"; then
     #  ndev="-net user,smb=$CFG_SMB $ndev"
     #fi
     echo $ndev
@@ -153,12 +153,12 @@ vm_run()
     vm_search $1
   else
     vm_search $2
-    if test "$VMHDD" = ""; then
+    if test "x$VMHDD" = "x"; then
       echo "$2: not an ISO image!"
     else
       vm_search $1
       echo $VMHDD | grep $1 > /dev/null
-      if test "$?" != "0"; then 
+      if test "x$?" != "x0"; then 
         echo "Creating VM [$1] as qcow2, $CFG_HDS"
 	$RUN vm_create_disk $CFG_HDS ${1}_hda.qcow2
 	vm_search ${1}_hda.qcow2
@@ -166,14 +166,14 @@ vm_run()
     fi
   fi
 
-  if test "$VMHDD" = ""; then
+  if test "x$VMHDD" = "x"; then
     echo KVM Image [$1] not found
     return
   fi
   
-  if test "$CFG_SCREEN" = "sdl"; then
+  if test "x$CFG_SCREEN" = "xsdl"; then
     VMRTIME="$VMMOUSE -daemonize"
-  elif test "$CFG_SCREEN" = "spice"; then
+  elif test "x$CFG_SCREEN" = "xspice"; then
     local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
     VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
     VMRTIME="$VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
@@ -198,7 +198,7 @@ list_iommu()
 vmdisk_list()
 {
   if test -e "$2"; then
-    if test "$1" = "-s"; then
+    if test "x$1" = "x-s"; then
       qemu-img snapshot -l $2
     else
       qemu-img info $2
@@ -207,7 +207,7 @@ vmdisk_list()
     for i in ${2}_hd?.{qcow2,raw,vvfat,vpc,vmdk,vhdx,vdi}
     do
       if test -e "$i"; then
-        if test "$1" = "-s"; then
+        if test "x$1" = "x-s"; then
           qemu-img snapshot -l $i
 	else
 	  qemu-img info $i
@@ -228,7 +228,7 @@ vmdisk_mount()
   case "$1" in
     *.raw)
       losetup -f -P $1
-      if test "$?" != "0"; then
+      if test "x$?" != "x0"; then
         return
       fi
       for i in /dev/loop0p*
