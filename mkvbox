@@ -622,13 +622,22 @@ Install_Batch_bash()
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
-
-PS1='\u:\w\\$ '
-
 ulimit -c unlimited
 
+PS1='\u:\w\\$ '
 PATH="\$PATH:\$HOME/bin:." 
 
+# replace expr with the bc command line express
+bc_cmdline()
+{
+  if test "x$@" = "x"; then
+    echo A quick call to GNU bc, i.e., bcc EXPRESSIONS
+  else
+    echo $@ | tr -d ',' | bc -l
+  fi
+}
+
+alias bcc='bc_cmdline'
 alias egrep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias grep='grep --color=auto'
