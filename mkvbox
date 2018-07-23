@@ -842,13 +842,16 @@ Install_Batch_firefox_qtm()
   LogExec tar xfj $FFOX -C /opt 
   LogExec rm -f $FFOX
 
-  if test -L /usr/bin/firefox; then	# firefox has already been linked out
-    LogAs "Firefox updated."
-  elif test -e /usr/bin/firefox; then
-    LogExec mv -f /usr/bin/firefox /usr/bin/firefox-52
-    LogExec ln -s /opt/firefox/firefox /usr/bin/firefox
-  else
-    cat >  $CHROOT/usr/share/applications/firefox.desktop << FIREFOX
+  # 20180723 steal the in-repo firefox causes problem and debian uses
+  # firefox-esr anyway, create a standalone menu entry may be better. 
+#  if test -L /usr/bin/firefox; then	# firefox has already been linked out
+#    LogAs "Firefox updated."
+#  elif test -e /usr/bin/firefox; then
+#    LogExec mv -f /usr/bin/firefox /usr/bin/firefox-52
+#    LogExec ln -s /opt/firefox/firefox /usr/bin/firefox
+#  else
+  if test ! -e /usr/share/applications/firefox-qtm.desktop; then
+    cat >  $CHROOT/usr/share/applications/firefox-qtm.desktop << FIREFOX
 [Desktop Entry]
 Version=1.0
 Name=Firefox Quantum Web Browser
