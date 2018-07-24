@@ -17,8 +17,9 @@
 # Configure
 #############################################################################
 CFG_ISO=
-CFG_HDS=16G
+CFG_CPU=1
 CFG_RAM=2G
+CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice
 
 #############################################################################
@@ -31,10 +32,11 @@ VMHDD=""
 
 #VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
 #          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
+# -smp 2,sockets=1,cores=1,threads=2
 VMVIDEO="-vga qxl"
 VMAUDIO="-soundhw hda"
 
-VMIOMMU="-enable-kvm -machine q35,accel=kvm -cpu host -smp 2,sockets=1,cores=1,threads=2"
+VMIOMMU="-enable-kvm -machine q35,accel=kvm"
 
 VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
 
@@ -43,7 +45,7 @@ VMSPICE="-device virtio-serial-pci \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
 	-chardev spicevmc,id=spicechannel0,name=vdagent"
 
-VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO -m $CFG_RAM $VMRNG"
+VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO $VMRNG"
 
 
 #############################################################################
@@ -172,16 +174,20 @@ vm_run()
     return
   fi
   
+  local VMRTIME="-m $CFG_RAM -cpu host -smp $CFG_CPU"
+  VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
+
   if test "x$CFG_SCREEN" = "xsdl"; then
-    VMRTIME="$VMMOUSE -daemonize"
+    VMRTIME="$VMRTIME $VMMOUSE -daemonize"
   elif test "x$CFG_SCREEN" = "xspice"; then
     local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
     VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
-    VMRTIME="$VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
+    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
     remote-viewer spice://127.0.0.1:$VMSPICEPORT&
   fi
-  echo qemu-system-x86_64 -name $1 $VMFLAGS $(add_nic ${1}) $VMHDD $VMRTIME
-  $RUN qemu-system-x86_64 -name $1 $VMFLAGS $(add_nic ${1}) $VMHDD $VMRTIME
+
+  echo qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
+  $RUN qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
 }
 
 list_iommu()
@@ -289,6 +295,7 @@ usage_exit()
 $0 [OPTION] KVM_IMAGE_NAME
 OPTION:
   -i, --install=IMAGE        The installer ISO image
+  -c, --cpu=NUM              Number of allocated CPU
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
       --spice                Set display to SPICE server
@@ -312,6 +319,9 @@ my_usage
 while [ "$#" -gt 0 ]; do 
   case "$1" in
     -h|--help) usage_exit;;
+
+    -c) CFG_CPU="$2"; shift;;
+    --cpu=*) CFG_CPU="${1#*=}";;
 
     -i) CFG_ISO="$2"; shift;;
     --install=*) CFG_ISO="${1#*=}";;
