@@ -36,10 +36,10 @@ CFG_CLI="$CFG_CLI archlinux"
 CFG_GUI="xutil pulsa"
 
 #### browers
-#CFG_GUI="$CFG_GUI firefox
-#CFG_GUI="$CFG_GUI firefox_qtm
-#CFG_GUI="$CFG_GUI chromium
-#CFG_GUI="$CFG_GUI chrome
+#CFG_GUI="$CFG_GUI firefox"
+#CFG_GUI="$CFG_GUI firefox_qtm"
+#CFG_GUI="$CFG_GUI chromium"
+#CFG_GUI="$CFG_GUI chrome"
 #### Downloader, for example, filezilla, bittorrents
 #CFG_GUI="$CFG_GUI downloader"
 #### Virtual Machine Hosts
@@ -569,7 +569,13 @@ Install_Batch_bash()
 {
   LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
 
+  grep bc_cmdline /etc/skel/.bashrc > /dev/null
+  if test "x$?" = "x0"; then
+    return
+  fi
+
   cat >> $CHROOT/etc/skel/.bashrc << BASHRC
+  
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
 ulimit -c unlimited
@@ -593,7 +599,9 @@ alias fgrep='fgrep --color=auto'
 alias grep='grep --color=auto'
 alias l.='ls -d .* --color=auto'
 alias ls='ls --color=auto'
-alias ll='ls -l --color=auto'
+alias ll='ls -lh --color=auto'
+alias cp='cp -i'
+alias mv='mv -i'
 alias path='echo \$PATH'
 
 BASHRC
@@ -1483,7 +1491,6 @@ TPADOFF
   esac
 }
 
-
 Toggle_Screen()
 {
   case $1 in
@@ -1531,24 +1538,28 @@ XMON
   esac
 }
 
-
-
 # For virtualbox quick copy
 Packing()
 {
-  local HOST=andy@10.0.2.2:~/Public
-  local FNAME=mkvbox-$(date +%Y%m%d%H%M%S).tar.gz
+  local HOST=andy@10.0.2.2:$1
+  local FNAME=mkvbox-$(date +%Y%m%d%H%M%S)
 
-  if test "x$1" = "xdown"; then
+  if test "x$1" = "x"; then		# pack only
+    mkdir $FNAME
+    cp -a bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh $FNAME
+    tar czf $FNAME.tar.gz $FNAME
+    rm -rf $FNAME
+  elif test "x$1" = "xPublic"; then	# packing and uploading
+    mkdir $FNAME
+    cp -a bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh $FNAME
+    tar czf $FNAME.tar.gz $FNAME
+    rm -rf $FNAME
+    echo Uploading the package $FNAME.tar.gz to SSH server $HOST
+    scp $FNAME.tar.gz $HOST
+    rm -f $FNAME.tar.gz
+  else
     echo Downloading from SSH server $HOST
     scp $HOST/mkvbox-*.tar.gz .
-  elif test "x$1" = "xonly"; then
-    tar czf $FNAME bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh
-  else
-    echo Uploading the package $FNAME to SSH server $HOST
-    tar czf $FNAME bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh
-    scp $FNAME $HOST
-    rm -f $FNAME
   fi
 }
 
@@ -1566,7 +1577,7 @@ OPTION:
   -i, --install     quick installing packages
   -t, --touchpad    change the touchpad control [disable/on/off]
       --screen      change screen size of client (qxl) [1920x1080/1280x1024/.../xinit]
-      --packing     pack and transfer the mkvbox to VM host [only/down]
+      --packing     pack and transfer the mkvbox to VM host [Public][download_path]
 
 my_usage
   exit 0

@@ -291,6 +291,8 @@ OPTION:
   -i, --install=IMAGE        The installer ISO image
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
+      --spice                Set display to SPICE server
+      --sdl                  Set display to SDL layer [default]
       --iommu                List the IOMMU Group
       --snapshot             List the known snapshots
       --vmdisk               List the VM disk volumn
