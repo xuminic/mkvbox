@@ -20,7 +20,7 @@ CFG_ISO=
 CFG_CPU=1
 CFG_RAM=2G
 CFG_HDS=16G
-CFG_SCREEN=sdl     	# sdl/spice
+CFG_SCREEN=sdl     	# sdl/spice/gtk
 
 #############################################################################
 # System definition
@@ -88,7 +88,7 @@ add_drive()
 
   #echo "-drive file=${1}${OPT_CACHE},if=virtio"
   echo "-device virtio-blk-pci,drive=ide${VMDRVID},scsi=off \
-	  -drive file=${1}${OPT_CACHE},if=none,id=ide${VMDRVID}${OPT_AIO}"
+	  -drive file=${1}${OPT_CACHE},format=$TYPE,if=none,id=ide${VMDRVID}${OPT_AIO}"
 } 
 
 # searching the available vm file systems
@@ -177,14 +177,16 @@ vm_run()
   local VMRTIME="-m $CFG_RAM -cpu host -smp $CFG_CPU"
   VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
 
-  if test "x$CFG_SCREEN" = "xsdl"; then
-    VMRTIME="$VMRTIME $VMMOUSE -daemonize"
-  elif test "x$CFG_SCREEN" = "xspice"; then
-    local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
-    VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
-    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
-    remote-viewer spice://127.0.0.1:$VMSPICEPORT&
-  fi
+  case "$CFG_SCREEN" in
+    sdl) VMRTIME="$VMRTIME $VMMOUSE -sdl -daemonize" ;;
+    spice) 
+      local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
+      VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
+      VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
+      remote-viewer spice://127.0.0.1:$VMSPICEPORT&
+      ;;
+    gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -daemonize" ;;
+  esac
 
   echo qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
   $RUN qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
@@ -296,10 +298,9 @@ $0 [OPTION] KVM_IMAGE_NAME
 OPTION:
   -i, --install=IMAGE        The installer ISO image
   -c, --cpu=NUM              Number of allocated CPU
+  -d, --display=DISPLAY      Set display to [gtk/sdl/spice]
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
-      --spice                Set display to SPICE server
-      --sdl                  Set display to SDL layer [default]
       --iommu                List the IOMMU Group
       --snapshot             List the known snapshots
       --vmdisk               List the VM disk volumn
@@ -323,6 +324,9 @@ while [ "$#" -gt 0 ]; do
     -c) CFG_CPU="$2"; shift;;
     --cpu=*) CFG_CPU="${1#*=}";;
 
+    -d) CFG_SCREEN="$2"; shift;;
+    --display) CFG_SCREEN="${1#*=}";;
+
     -i) CFG_ISO="$2"; shift;;
     --install=*) CFG_ISO="${1#*=}";;
 
@@ -331,9 +335,6 @@ while [ "$#" -gt 0 ]; do
 
     -s) CFG_HDS="$2"; shift;;
     --hdd-size=*) CFG_HDS="${1#*=}";;
-
-    --spice) CFG_SCREEN="spice" ;;
-    --sdl) CFG_SCREEN="sdl" ;;
 
     --iommu) list_iommu; exit 0;;
 

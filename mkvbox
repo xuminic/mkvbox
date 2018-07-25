@@ -33,7 +33,7 @@ CFG_CLI="$CFG_CLI archlinux"
 #############################################################################
 # install X11 GUI tools
 #############################################################################
-CFG_GUI="xutil pulsa"
+CFG_GUI="xutil"
 
 #### browers
 #CFG_GUI="$CFG_GUI firefox"
@@ -55,6 +55,8 @@ CFG_GROUP_PIC="geeqie gthumb imagemagick gimp inkscape"
 #### CAD suites
 #CFG_GUI="$CFG_GUI cad"
 CFG_GROUP_CAD="librecad freecad openscad blender"
+####audio player
+#CFG_GUI="$CFG_GUI pulsa"
 #### video player
 #CFG_GUI="$CFG_GUI vlc"
 #### GStreamer codec collection
@@ -1441,6 +1443,16 @@ Install_Batch_fcitx()
   Install_Batch_chinese
 }
 
+Install_Batch_bluetooth()
+{
+  LogAs "\\nINSTALLING Bluetooth Manager"
+
+  case $CFG_SYS in
+    CENTOS) Installer bluez pulseaudio-module-bluetooth bluez-tools ;;
+    DEBIAN|UBUNTU) Installer blueman bluez pulseaudio-module-bluetooth bluez-tools bluez-firmware ;;
+    ARCHLINUX) ;;
+  esac
+}
 
 #############################################################################
 # Support Scripts
@@ -1747,6 +1759,7 @@ report_exit 0
 #    Some command may help diagnostic: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=799253
 #      ls -lR /sys/bus/virtio/drivers/virtio_net/
 #      udevadm info --export-db
+#  * Pulseaudio brings in too many softwares (include vlc in centos) so disbled it for VM client.
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
