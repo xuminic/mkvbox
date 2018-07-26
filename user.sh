@@ -11,6 +11,18 @@ if test -e /usr/bin/ibus || test -e /usr/bin/fcitx; then
        "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
     gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
   fi
+
+  # gtk3 theme might cause IME background issue.
+  # https://github.com/ibus/ibus/issues/1871
+  if test -d ~/.config/gtk-3.0; then
+    grep "gtk-secondary-caret-color" ~/.config/gtk-3.0/gtk.css > /dev/null
+    if test "x$?" = "x0"; then
+      echo "Found gtk-secondary-caret-color in ~/.config/gtk-3.0/gtk.css"
+    else
+      echo '* { -gtk-secondary-caret-color: #dbdee6; }' >> ~/.config/gtk-3.0/gtk.css
+      echo "Please reload IBUS"
+    fi
+  fi
 fi
 
 # Initial my git reference

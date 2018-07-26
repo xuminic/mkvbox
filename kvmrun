@@ -32,11 +32,11 @@ VMHDD=""
 
 #VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
 #          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
-# -smp 2,sockets=1,cores=1,threads=2
 VMVIDEO="-vga qxl"
 VMAUDIO="-soundhw hda"
 
-VMIOMMU="-enable-kvm -machine q35,accel=kvm"
+#VMIOMMU="-enable-kvm -machine q35,accel=kvm"
+VMIOMMU="-enable-kvm -machine pc,accel=kvm"
 
 VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
 
@@ -174,11 +174,22 @@ vm_run()
     return
   fi
   
-  local VMRTIME="-m $CFG_RAM -cpu host -smp $CFG_CPU"
+  local VMRTIME="-m $CFG_RAM -cpu host"
+
+  case "$CFG_CPU" in
+    1) ;;
+    2) VMRTIME="$VMRTIME -smp 2,sockets=1,cores=1,threads=2" ;;
+    4) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=1" ;;
+    8) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=2" ;;
+    *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
+  esac
+
   VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
 
   case "$CFG_SCREEN" in
-    sdl) VMRTIME="$VMRTIME $VMMOUSE -sdl -daemonize" ;;
+    sdl) VMRTIME="$VMRTIME $VMMOUSE -sdl -daemonize" 
+      LogAs "Switch to monitor window by ctrl-alt-2"
+      ;;
     spice) 
       local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
       VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)

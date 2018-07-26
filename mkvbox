@@ -10,6 +10,9 @@ CFG_LOG=install.log	# define the log file
 CFG_HOSTNAME=mylinux		# setup the hostname (archlinux)
 CFG_DOMAIN=localdomain		# setup the domain name (archlinux)
 
+SSHOST=andy@10.0.2.2
+SSPASS=
+
 #############################################################################
 # install command line tools
 #############################################################################
@@ -306,7 +309,7 @@ Install_Batch_cli()
   LogAs "\\nINSTALLING generic CLI tools"
 
   #### ifconfig/lspci/samba/... always needed
-  Installer net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio bc
+  Installer net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio bc expect
   case $CFG_SYS in
     CENTOS) Installer hexedit ;;
     DEBIAN) Installer aptitude ;;
@@ -1550,28 +1553,64 @@ XMON
   esac
 }
 
+# $1: from  $2: to
+Expected_scp()
+{
+  if test "$1" = "*:*"; then
+    echo Downloading from SSH server $1
+  else
+    echo Uploading $1 to SSH server $2
+  fi
+  if test -x /usr/bin/expect -a "x$SSPASS" != "x"; then
+    expect -c "
+set timeout 60
+spawn scp $1 $2
+expect {
+  \"yes/no\" { 
+    send \"yes\r\"
+    exp_continue
+  }
+  \"*?assword\" { 
+    send \"$SSPASS\r\" 
+    interact
+  } 
+} "
+  else
+    scp $1 $2
+  fi
+}
+
 # For virtualbox quick copy
 Packing()
 {
-  local HOST=andy@10.0.2.2:$1
   local FNAME=mkvbox-$(date +%Y%m%d%H%M%S)
+  local OBJS="bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh"
 
   if test "x$1" = "x"; then		# pack only
-    mkdir $FNAME
-    cp -a bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh $FNAME
-    tar czf $FNAME.tar.gz $FNAME
-    rm -rf $FNAME
+    tar czf $FNAME.tar.gz $OBJS
   elif test "x$1" = "xPublic"; then	# packing and uploading
-    mkdir $FNAME
-    cp -a bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh $FNAME
-    tar czf $FNAME.tar.gz $FNAME
-    rm -rf $FNAME
-    echo Uploading the package $FNAME.tar.gz to SSH server $HOST
-    scp $FNAME.tar.gz $HOST
+    tar czf $FNAME.tar.gz $OBJS
+    Expected_scp $FNAME.tar.gz $SSHOST:$1
     rm -f $FNAME.tar.gz
   else
-    echo Downloading from SSH server $HOST
-    scp $HOST/mkvbox-*.tar.gz .
+    echo Downloading from SSH server $SSHOST:$1
+    Expected_scp $SSHOST:$1/mkvbox-*.tar.gz .
+  fi
+}
+
+Copy_Paste()
+{
+  local CLIPPATH=/tmp
+  local CLIPFILE=clipboard.txt
+
+  # let clients do the transfering 
+  ip addr | grep 10.0.2 > /dev/null
+  if test "x$?" = "x1"; then
+    pluma $CLIPPATH/$CLIPFILE &
+  else
+    Expected_scp $SSHOST:$CLIPPATH/$CLIPFILE $CLIPPATH
+    pluma $CLIPPATH/$CLIPFILE
+    Expected_scp $CLIPPATH/$CLIPFILE $SSHOST:$CLIPPATH
   fi
 }
 
@@ -1590,6 +1629,7 @@ OPTION:
   -t, --touchpad    change the touchpad control [disable/on/off]
       --screen      change screen size of client (qxl) [1920x1080/1280x1024/.../xinit]
       --packing     pack and transfer the mkvbox to VM host [Public][download_path]
+      --clip        simple way to copy and paste
 
 my_usage
   exit 0
@@ -1644,6 +1684,7 @@ while [ "$#" -gt 0 ]; do
     -t|--touchpad) Toggle_Touchpad $2; exit 0;;
     --screen) Toggle_Screen "$2"; exit 0;;
     --packing) Packing $2; exit 0;;
+    --clip) Copy_Paste; exit 0;;
 
     -i|--install) 
       if test "x$2" = "x"; then
@@ -1760,6 +1801,8 @@ report_exit 0
 #      ls -lR /sys/bus/virtio/drivers/virtio_net/
 #      udevadm info --export-db
 #  * Pulseaudio brings in too many softwares (include vlc in centos) so disbled it for VM client.
+#  * q35 architecture stop the internal savevm command. Have to disable it temporarily.
+#    https://bugzilla.redhat.com/show_bug.cgi?id=953062
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
