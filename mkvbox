@@ -779,6 +779,7 @@ Install_Desktop_Xfce()
   case $CFG_SYS in
     CENTOS)
       Installer -g "Xfce"
+      Installer mousepad
       ;;
     DEBIAN|UBUNTU)
       Installer xfce4 xfce4-goodies thunar-archive-plugin lightdm
@@ -1426,6 +1427,29 @@ Install_Batch_ibus()
     DEBIAN|UBUNTU) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
     ARCHLINUX) Installer ibus ibus-qt ibus-libpinyin ibus-googlepinyin ibus-anthy ;;
   esac 
+
+  # auto start the daemon
+  cat >> /etc/X11/xinit/xinitrc << ASIBUS
+
+if test -x /usr/bin/ibus-daemon; then
+  ibus-daemon -drx
+fi
+
+ASIBUS
+
+  # added recommanded variables to bashrc
+  # there was a dispute about xim method, see
+  # https://wiki.archlinux.org/index.php/IBus
+  grep GTK_IM_MODULE $CHROOT/etc/skel/.bashrc > /dev/null
+  if test "x$?" != "x0"; then
+cat >> $CHROOT/etc/skel/.bashrc << CFGIBUS
+
+export GTK_IM_MODULE=xim
+export XMODIFIERS=@im=ibus
+export QT_IM_MODULE=xim
+
+CFGIBUS
+  fi
 
   # install extra chinese fonts and japanese fonts
   Install_Batch_eafont

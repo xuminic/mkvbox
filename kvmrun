@@ -188,7 +188,7 @@ vm_run()
 
   case "$CFG_SCREEN" in
     sdl) VMRTIME="$VMRTIME $VMMOUSE -sdl -daemonize" 
-      LogAs "Switch to monitor window by ctrl-alt-2"
+      echo "Switch to monitor window by ctrl-alt-2"
       ;;
     spice) 
       local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
