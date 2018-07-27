@@ -187,7 +187,7 @@ vm_run()
   VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
 
   case "$CFG_SCREEN" in
-    sdl) VMRTIME="$VMRTIME $VMMOUSE -sdl -daemonize" 
+    sdl) VMRTIME="$VMRTIME $VMMOUSE -display sdl,window_close=off -daemonize" 
       echo "Switch to monitor window by ctrl-alt-2"
       ;;
     spice) 
@@ -196,7 +196,7 @@ vm_run()
       VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
       remote-viewer spice://127.0.0.1:$VMSPICEPORT&
       ;;
-    gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -daemonize" ;;
+    gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -no-quit -daemonize" ;;
   esac
 
   echo qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
