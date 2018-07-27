@@ -540,7 +540,7 @@ SMBCFG
     pdbedit -u $DEFUSER > /dev/null
     if test "x$?" != "x0"; then
       LogAs "Adding the Samba User: $i"
-      LogExec smbpasswd -a $i
+      LogExec smbpasswd -a "$i"
     fi
   done
 
@@ -1492,7 +1492,7 @@ Toggle_Touchpad()
 
   local PadID=$(xinput list --id-only "SynPS/2 Synaptics TouchPad" 2> /dev/null)
 
-  case $1 in
+  case "$1" in
     on|ON)
       if test "x$PadID" = "x"; then
         LogAs "TouchPad not found"
@@ -1532,7 +1532,7 @@ TPADOFF
 
 Toggle_Screen()
 {
-  case $1 in
+  case "$1" in
     1920x1080) xrandr --output Virtual-0 --mode 1920x1080 ;;
     1280x1024) xrandr --output Virtual-0 --mode 1280x1024 ;;
     1280x960) xrandr --output Virtual-0 --mode 1280x960 ;;
@@ -1563,8 +1563,8 @@ XMON
       ;;
 
     *x*)
-      local WIDTH=$(echo $1|cut -d'x' -f1)
-      local HEIGHT=$(echo $1|cut -d'x' -f2)
+      local WIDTH=$(echo $1 | cut -d'x' -f1)
+      local HEIGHT=$(echo $1 | cut -d'x' -f2)
       local MODLINE=$(cvt $WIDTH $HEIGHT | grep Modeline | cut -d' ' -f2-)
       local MODNAME=$(echo $MODLINE | cut -d'"' -f2)
       if test "x$MODLINE" != "x"; then
@@ -1588,7 +1588,7 @@ Expected_scp()
   if test -x /usr/bin/expect -a "x$SSPASS" != "x"; then
     expect -c "
 set timeout 60
-spawn scp $1 $2
+spawn scp \"$1\" \"$2\"
 expect {
   \"yes/no\" { 
     send \"yes\r\"
@@ -1600,7 +1600,7 @@ expect {
   } 
 } "
   else
-    scp $1 $2
+    scp "$1" "$2"
   fi
 }
 
@@ -1614,11 +1614,11 @@ Packing()
     tar czf $FNAME.tar.gz $OBJS
   elif test "x$1" = "xPublic"; then	# packing and uploading
     tar czf $FNAME.tar.gz $OBJS
-    Expected_scp $FNAME.tar.gz $SSHOST:$1
+    Expected_scp $FNAME.tar.gz $SSHOST:"$1"
     rm -f $FNAME.tar.gz
   else
     echo Downloading from SSH server $SSHOST:$1
-    Expected_scp $SSHOST:$1/mkvbox-*.tar.gz .
+    Expected_scp $SSHOST:"$1"/mkvbox-*.tar.gz .
   fi
 }
 
@@ -1738,9 +1738,9 @@ while [ "$#" -gt 0 ]; do
       fi
       shift;;
 
-    -t|--touchpad) Toggle_Touchpad $2; exit 0;;
+    -t|--touchpad) Toggle_Touchpad "$2"; exit 0;;
     --screen) Toggle_Screen "$2"; exit 0;;
-    --packing) Packing $2; exit 0;;
+    --packing) Packing "$2"; exit 0;;
     --clip) SSPASS="$2"; Copy_Paste; exit 0;;
 
     -i|--install) 

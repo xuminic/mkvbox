@@ -12,6 +12,7 @@
 
 # debug only
 #RUN=echo
+RUN=eval
 
 #############################################################################
 # Configure
@@ -64,8 +65,8 @@ VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO $VMRNG"
 # qemu [...] -drive if=none,id=drive0,format=raw -device virtio-blk-pci,drive=drive0,scsi=off ...
 add_drive()
 {
-  local TYPE=$(qemu-img info $1 | grep 'file format:' | cut -d' ' -f3)
-  #local SIZE=$(qemu-img info $1 | grep 'virtual size:' | cut -d'(' -f2 | cut -d' ' -f1)
+  local TYPE=$(qemu-img info "$1" | grep 'file format:' | cut -d' ' -f3)
+  #local SIZE=$(qemu-img info "$1" | grep 'virtual size:' | cut -d'(' -f2 | cut -d' ' -f1)
   local SIZE=0
   local OPT_CACHE=""
   #local OPT_AIO=",aio=native,cache=none"
@@ -88,7 +89,7 @@ add_drive()
 
   #echo "-drive file=${1}${OPT_CACHE},if=virtio"
   echo "-device virtio-blk-pci,drive=ide${VMDRVID},scsi=off \
-	  -drive file=${1}${OPT_CACHE},format=$TYPE,if=none,id=ide${VMDRVID}${OPT_AIO}"
+	  -drive file=\"${1}\"${OPT_CACHE},format=$TYPE,if=none,id=ide${VMDRVID}${OPT_AIO}"
 } 
 
 # searching the available vm file systems
@@ -96,9 +97,13 @@ add_drive()
 # $2: output string
 vm_search()
 {
+
+  local TMPDRV=
+
   if test -e "$1"; then
     # if explicily given the vm file system
-    VMHDD="$VMHDD $(add_drive $1)"
+    TMPDRV=$(add_drive "$1")
+    VMHDD="$VMHDD $TMPDRV"
     VMDRVID=$(expr $VMDRVID + 1)
   else
     # if given the vm name then searching for it's file systems 
@@ -106,12 +111,13 @@ vm_search()
     for i in ${1}_hd?.{qcow2,raw,vvfat,vpc,vmdk,vhdx,vdi}
     do
       if test -e "$i"; then
-	VMHDD="$VMHDD $(add_drive $i)"
+        TMPDRV=$(add_drive "$i")
+	VMHDD="$VMHDD $TMPDRV"
 	VMDRVID=$(expr $VMDRVID + 1)
       fi
     done
   fi
-  #echo $VMHDD
+  #echo VS: $VMHDD
 }
 
 
@@ -127,7 +133,7 @@ vm_search()
 add_nic()
 {
 
-    local nhash=$(echo $1|md5sum)
+    local nhash=$(echo "$1" | md5sum)
     local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
     local ndev="-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
     #if test "x$CFG_SMB" != "x"; then
@@ -141,8 +147,8 @@ add_nic()
 vm_create_disk()
 {
   if test ! -e "$2"; then
-    echo qemu-img create -f qcow2 -o cluster_size=256K $2 $1
-    $RUN qemu-img create -f qcow2 -o cluster_size=256K $2 $1
+    echo qemu-img create -f qcow2 -o cluster_size=256K "$2" "$1"
+    $RUN qemu-img create -f qcow2 -o cluster_size=256K \"$2\" \"$1\"
   fi
 }
 
@@ -153,17 +159,17 @@ vm_create_disk()
 vm_run()
 {
   if test ! -e "$2"; then		# no installation is required
-    vm_search $1
+    vm_search "$1"
   else
-    vm_search $2
+    vm_search "$2"
     if test "x$VMHDD" = "x"; then
       echo "$2: not an ISO image!"
     else
-      vm_search $1
-      echo $VMHDD | grep $1 > /dev/null
+      vm_search "$1"
+      echo $VMHDD | grep "$1" > /dev/null
       if test "x$?" != "x0"; then 
         echo "Creating VM [$1] as qcow2, $CFG_HDS"
-	$RUN vm_create_disk $CFG_HDS ${1}_hda.qcow2
+	vm_create_disk $CFG_HDS ${1}_hda.qcow2
 	vm_search ${1}_hda.qcow2
       fi
     fi
@@ -173,7 +179,7 @@ vm_run()
     echo KVM Image [$1] not found
     return
   fi
-  
+
   local VMRTIME="-m $CFG_RAM -cpu host"
 
   case "$CFG_CPU" in
@@ -199,8 +205,8 @@ vm_run()
     gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -no-quit -daemonize" ;;
   esac
 
-  echo qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
-  $RUN qemu-system-x86_64 -name $1 $VMFLAGS $VMRTIME
+  echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME
+  $RUN qemu-system-x86_64 -name \"$1\" $VMFLAGS $VMRTIME
 }
 
 list_iommu()
@@ -219,18 +225,18 @@ vmdisk_list()
 {
   if test -e "$2"; then
     if test "x$1" = "x-s"; then
-      qemu-img snapshot -l $2
+      qemu-img snapshot -l "$2"
     else
-      qemu-img info $2
+      qemu-img info "$2"
     fi
   else
     for i in ${2}_hd?.{qcow2,raw,vvfat,vpc,vmdk,vhdx,vdi}
     do
       if test -e "$i"; then
         if test "x$1" = "x-s"; then
-          qemu-img snapshot -l $i
+          qemu-img snapshot -l "$i"
 	else
-	  qemu-img info $i
+	  qemu-img info "$i"
 	  echo ""
 	fi
       fi
@@ -247,24 +253,24 @@ vmdisk_mount()
 {
   case "$1" in
     *.raw)
-      losetup -f -P $1
+      losetup -f -P "$1"
       if test "x$?" != "x0"; then
         return
       fi
       for i in /dev/loop0p*
       do
-        mkdir /media/$(basename $i)
-	mount $i /media/$(basename $i)
+        mkdir /media/$(basename "$i")
+	mount "$i" /media/$(basename "$i")
       done
       ;;
     *.qcow2)
       modprobe nbd max_part=16
-      qemu-nbd -c /dev/nbd0 $1
+      qemu-nbd -c /dev/nbd0 "$1"
       partprobe -s /dev/nbd0
       for i in /dev/nbd0p*
       do
-        mkdir /media/$(basename $i)
-	mount $i /media/$(basename $i)
+        mkdir /media/$(basename "$i")
+	mount "$i" /media/$(basename "$i")
       done
       ;;
     *) echo Unrecognized disk image.
@@ -349,11 +355,11 @@ while [ "$#" -gt 0 ]; do
 
     --iommu) list_iommu; exit 0;;
 
-    --snapshot) vmdisk_list -s $2; exit 0;;
-    --vmdisk)   vmdisk_list -d $2; exit 0;;
+    --snapshot) vmdisk_list -s "$2"; exit 0;;
+    --vmdisk)   vmdisk_list -d "$2"; exit 0;;
 
-    --mount) vmdisk_mount $2; exit 0;;
-    --umount) vmdisk_umount $2; exit 0;;
+    --mount) vmdisk_mount "$2"; exit 0;;
+    --umount) vmdisk_umount "$2"; exit 0;;
 
     --vnc) remote-viewer spice://127.0.0.1:5930; exit 0;;
 
@@ -368,6 +374,6 @@ if [ "$#" = "0" ]; then
 fi
 
 export QEMU_AUDIO_DRV=pa
-vm_run $1 $CFG_ISO
+vm_run "$1" "$CFG_ISO"
 
 
