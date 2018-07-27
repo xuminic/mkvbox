@@ -1602,16 +1602,49 @@ Copy_Paste()
 {
   local CLIPPATH=/tmp
   local CLIPFILE=clipboard.txt
+  local EDITOR=vi
+
+  if test -x /usr/bin/pluma; then
+    EDITOR=/usr/bin/pluma
+  elif test -x /usr/bin/mousepad; then
+    EDITOR=/usr/bin/mousepad
+  elif test -x /usr/bin/gedit; then
+    EDITOR=/usr/bin/gedit
+  elif test -x /usr/bin/leafpad; then
+    EDITOR=/usr/bin/leafpad
+  elif test -x /usr/bin/kwrite; then
+    EDITOR=/usr/bin/kwrite
+  fi
 
   # let clients do the transfering 
   ip addr | grep 10.0.2 > /dev/null
   if test "x$?" = "x1"; then
-    pluma $CLIPPATH/$CLIPFILE &
+    $EDITOR $CLIPPATH/$CLIPFILE &
   else
     Expected_scp $SSHOST:$CLIPPATH/$CLIPFILE $CLIPPATH
-    pluma $CLIPPATH/$CLIPFILE
-    Expected_scp $CLIPPATH/$CLIPFILE $SSHOST:$CLIPPATH
+    local BEFORE=$(md5sum $CLIPPATH/$CLIPFILE | cut -f1 -d' ')
+    $EDITOR $CLIPPATH/$CLIPFILE
+    if test "$BEFORE" != $(md5sum $CLIPPATH/$CLIPFILE | cut -f1 -d' '); then
+      Expected_scp $CLIPPATH/$CLIPFILE $SSHOST:$CLIPPATH
+    fi
   fi
+}
+
+
+xconfigure()
+{
+  # It was trying to fix the pluma flickering issue in QXL/SDL window
+  # https://askubuntu.com/questions/895558/screen-flickering-when-i-run-commands-in-gnome-terminal
+  # however it didn't work, though the configure file might be useful later
+
+  cat > /usr/share/X11/xorg.conf.d/20-qxl.conf << QXLCONF
+Section "Device"
+	Identifier  "Card0"
+	Driver      "qxl"
+	BusID       "PCI:0:2:0"
+	Option      "AccelMethod"  "none"
+EndSection
+QXLCONF
 }
 
 #############################################################################
@@ -1684,7 +1717,7 @@ while [ "$#" -gt 0 ]; do
     -t|--touchpad) Toggle_Touchpad $2; exit 0;;
     --screen) Toggle_Screen "$2"; exit 0;;
     --packing) Packing $2; exit 0;;
-    --clip) Copy_Paste; exit 0;;
+    --clip) SSPASS="$2"; Copy_Paste; exit 0;;
 
     -i|--install) 
       if test "x$2" = "x"; then
