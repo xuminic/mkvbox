@@ -428,10 +428,10 @@ Install_Batch_vsftpd()
   if test "x$CHROOT" != x; then
     LogAs "Configure the /etc/vsftpd/vsftpd.conf file"
   else
-    sed -e 's/^[#]*anonymous_enable=.*/anonymous_enable=NO/g' \
-	    -e 's/^[#]*local_enable=.*/local_enable=YES/g' \
-	    -e 's/^[#]*write_enable=.*/write_enable=YES/g' \
-	    -e 's/^[#]*chroot_local_user=.*/chroot_local_user=YES/g' \
+    sed -e 's/^[#]*anonymous_enable=.*/anonymous_enable=NO/1' \
+	    -e 's/^[#]*local_enable=.*/local_enable=YES/1' \
+	    -e 's/^[#]*write_enable=.*/write_enable=YES/1' \
+	    -e 's/^[#]*chroot_local_user=.*/chroot_local_user=YES/1' \
 	    /tmp/vsftpd.conf > /etc/vsftpd/vsftpd.conf
     echo -e "\\npasv_enable=Yes\\npasv_max_port=10100\\npasv_min_port=10090\\n" \
 	    >> /etc/vsftpd/vsftpd.conf
@@ -460,7 +460,7 @@ Install_Batch_vsftpd()
 
 Install_Batch_samba()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | cut -f1 -d':')
+  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
 
   LogAs "\\nINSTALLING the SAMBA service."
   Installer samba samba-client
@@ -672,7 +672,7 @@ Install_Batch_skel()
 
   if test $(id -u) = 0 -a "x$1" = "x-a"; then
     LogAs "\\nINSTALLING scripts in /etc/skel to all users"
-    local DEFUSER=$(grep '/home/' /etc/passwd | cut -f1 -d':')
+    local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
     for i in $DEFUSER; do
       LogExec sudo -u $i cp /etc/skel/.bashrc /etc/skel/.vimrc /home/$i
     done
@@ -698,7 +698,7 @@ Install_Batch_eth0()
   if test "x$CHROOT" != "x"; then
     LogAs "Disabling the Predictable Network Interface Names"
   else
-    sed -e 's/^[#]*GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"net.ifnames=0 /' \
+    sed -e 's/^[#]*GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"net.ifnames=0 /1' \
 	    /tmp/grub > /etc/default/grub
     LogExec update-grub
   fi
@@ -711,8 +711,8 @@ Install_Batch_eth0()
       elif test "x$CHROOT" != "x"; then
         LogAs "Restore eth0 interface in $CFG_SYS"
       else
-        sed -e 's/NAME=.*/NAME="eth0"/g' \
-		-e 's/DEVICE=.*/DEVICE="eth0"/g' \
+        sed -e 's/NAME=.*/NAME="eth0"/1' \
+		-e 's/DEVICE=.*/DEVICE="eth0"/1' \
 		/etc/sysconfig/network-scripts/ifcfg-en* > /etc/sysconfig/network-scripts/ifcfg-eth0
       fi
       ;;
@@ -721,13 +721,24 @@ Install_Batch_eth0()
       if test "x$CHROOT" != "x"; then
 	LogAs "Restore eth0 interface in $CFG_SYS"
       else
-        sed -e 's/allow-hotplug.*/allow-hotplug eth0/g' \
-	       -e 's/iface en.*/iface eth0 inet dhcp/g' \
+        sed -e 's/allow-hotplug.*/allow-hotplug eth0/1' \
+	       -e 's/iface en.*/iface eth0 inet dhcp/1' \
 	       /tmp/interfaces > /etc/network/interfaces
       fi
       LogExec rm -f /tmp/interfaces
       ;;
-    UBUNTU) ;;
+    UBUNTU) 
+      for i in $(grep -l ethernets /etc/netplan/*); do
+        LogExec mv -f $i /tmp/interface
+	if test "x$CHROOT" != "x"; then
+	  LogAs "Restore eth0 interface in $CFG_SYS"
+	else
+	  sed 's/ en.*/ eth0/1' /tmp/interface > $i
+	fi
+	LogExec rm -f /tmp/interface
+      done
+      ;;
+
     ARCHLINUX) ;;
   esac
 }
@@ -1109,7 +1120,7 @@ GGLYUM
 
 Install_Batch_virtualbox()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | cut -f1 -d':')
+  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
   
   LogAs "\\nINSTALLING Oracle Repo Virtualbox"
   case $CFG_SYS in
@@ -1182,7 +1193,7 @@ Install_Batch_vbguest()
 {
   # FIXED: Most guest addition has problem with CentOS7.5/7.6. Only 5.2.x test builds work.
   # https://forums.virtualbox.org/viewtopic.php?f=3&t=87529
-  local DEFUSER=$(grep '/home/' /etc/passwd | cut -f1 -d':')
+  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
 
   #install GNU GCC Compiler, kernel module and Development Environment
   LogAs "\\nINSTALLING Virtualbox Guest Addition"
@@ -1608,7 +1619,7 @@ expect {
 Packing()
 {
   local FNAME=mkvbox-$(date +%Y%m%d%H%M%S)
-  local OBJS="bin kvmrun LICENSE mkvbox README.md tmp.txt user.sh"
+  local OBJS="bin kvmrun LICENSE mkvbox README.md tmp.txt profile"
 
   if test "x$1" = "x"; then		# pack only
     tar czf $FNAME.tar.gz $OBJS
@@ -1849,7 +1860,7 @@ report_exit 0
 #    [Updated] Seems fcitx not functional in all distribution.
 #  * The source of the string magic [! -z "${CFG_GUI##* $CFG_VMCN *}"] is
 #    https://stackoverflow.com/questions/918886/how-do-i-split-a-string-on-a-delimiter-in-bash
-#  * Relocated the gsettings of pluma from Install_Batch_chinese() to user.sh because 
+#  * Relocated the gsettings of pluma from Install_Batch_chinese() to profile because 
 #    gsettings require a run X session and it's a per-user based configuration.
 #  * The Predictable Network Interface Names caused the ethernet interface name
 #    unpredicatble in VM when machine types, buses, devices, etc. changes.
