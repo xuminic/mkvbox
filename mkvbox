@@ -37,6 +37,7 @@ CFG_CLI="$CFG_CLI archlinux"
 # install X11 GUI tools
 #############################################################################
 CFG_GUI="xutil"
+CFG_GROUP_XUTIL="geary"
 
 #### browers
 #CFG_GUI="$CFG_GUI firefox"
@@ -957,6 +958,10 @@ Install_Batch_xutil()
       UBUNTU) Installer vim-gtk ;;
       ARCHLINUX) Installer gvim ;;
     esac
+  fi
+
+  if test "x$CFG_GROUP_XUTIL" != "x"; then
+    Installer $CFG_GROUP_XUTIL
   fi
 
   if test "x$1" = "-a"; then
