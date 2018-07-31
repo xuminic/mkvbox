@@ -1851,6 +1851,7 @@ report_exit 0
 #  * matplotlib requires python-dev
 #  * gstreamer1-vaapi seems a trouble maker
 #  * CENTOS: Xfce need to be explictly chosen when logining
+#  * https://github.com/qemu/qemu/blob/master/docs/qdev-device-use.txt
 #
 # Issue:
 #  * MATE was broken by EPEL repo in CentOS 7.

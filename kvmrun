@@ -87,10 +87,24 @@ add_drive()
     *) return ;;
   esac
 
-  #echo "-drive file=${1}${OPT_CACHE},if=virtio"
-  echo "-device virtio-blk-pci,drive=ide${VMDRVID},scsi=off \
-	  -drive file=\"${1}\"${OPT_CACHE},format=$TYPE,if=none,id=ide${VMDRVID}${OPT_AIO}"
+  echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
+	  -device virtio-blk-pci,scsi=off,drive=ide${VMDRVID}"
 } 
+
+vm_cdrom()
+{
+  if test ! -e "$1"; then
+    return
+  fi
+
+  if test "$(qemu-img info "$1" | grep 'file format:' | cut -d' ' -f3)" != "raw"; then
+    return
+  fi
+
+  VMHDD="$VMHDD -drive if=none,format=raw,snapshot=on,id=cdrom0,file=\"${1}\" \
+	  -device ide-cd,drive=cdrom0"
+}
+
 
 # searching the available vm file systems
 # $1: filename or vm name
@@ -161,12 +175,12 @@ vm_run()
   if test ! -e "$2"; then		# no installation is required
     vm_search "$1"
   else
-    vm_search "$2"
+    vm_cdrom "$2"
     if test "x$VMHDD" = "x"; then
       echo "$2: not an ISO image!"
     else
       vm_search "$1"
-      echo $VMHDD | grep "$1" > /dev/null
+      echo $VMHDD | grep "file=$1," > /dev/null
       if test "x$?" != "x0"; then 
         echo "Creating VM [$1] as qcow2, $CFG_HDS"
 	vm_create_disk $CFG_HDS ${1}_hda.qcow2
