@@ -310,7 +310,7 @@ Install_Batch_cli()
   LogAs "\\nINSTALLING generic CLI tools"
 
   #### ifconfig/lspci/samba/... always needed
-  Installer net-tools wget pciutils cifs-utils arj git p7zip arj zip unzip cpio bc expect
+  Installer net-tools wget pciutils usbutils cifs-utils arj git p7zip arj zip unzip cpio bc expect
   case $CFG_SYS in
     CENTOS) Installer hexedit ;;
     DEBIAN) Installer aptitude ;;
@@ -573,6 +573,8 @@ SMBCFG
 
 Install_Batch_bash()
 {
+  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+ 
   LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
 
   grep bc_cmdline /etc/skel/.bashrc > /dev/null
@@ -623,6 +625,11 @@ BASHRC
     ARCHLINUX)
       ;;
   esac
+
+  if test "x$DEFUSER" != "x"; then
+    # Add user to group to access: the usb serial port
+    LogExec usermod -a -G dialout $DEFUSER
+  fi
 }
 
 Install_Batch_archlinux()

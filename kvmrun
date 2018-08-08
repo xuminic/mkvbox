@@ -114,11 +114,14 @@ vm_search()
 
   local TMPDRV=
 
+  VMDISK=""
   if test -e "$1"; then
     # if explicily given the vm file system
     TMPDRV=$(add_drive "$1")
     VMHDD="$VMHDD $TMPDRV"
     VMDRVID=$(expr $VMDRVID + 1)
+    VMDISK="$1"
+    qemu-img info "$1" >> ${1}.log
   else
     # if given the vm name then searching for it's file systems 
     # in the name pattern: xxx_hdx.*
@@ -128,6 +131,8 @@ vm_search()
         TMPDRV=$(add_drive "$i")
 	VMHDD="$VMHDD $TMPDRV"
 	VMDRVID=$(expr $VMDRVID + 1)
+	VMDISK="$i"
+	qemu-img info "$i" >> ${1}.log
       fi
     done
   fi
@@ -164,63 +169,6 @@ vm_create_disk()
     echo qemu-img create -f qcow2 -o cluster_size=256K "$2" "$1"
     $RUN qemu-img create -f qcow2 -o cluster_size=256K \"$2\" \"$1\"
   fi
-}
-
-# Run the vmachine
-# Parameters: 
-#  $1 is the VM name or the disk image of the VM 
-#  $2 optional ISO image (install mode)
-vm_run()
-{
-  if test ! -e "$2"; then		# no installation is required
-    vm_search "$1"
-  else
-    vm_cdrom "$2"
-    if test "x$VMHDD" = "x"; then
-      echo "$2: not an ISO image!"
-    else
-      vm_search "$1"
-      echo $VMHDD | grep "file=$1," > /dev/null
-      if test "x$?" != "x0"; then 
-        echo "Creating VM [$1] as qcow2, $CFG_HDS"
-	vm_create_disk $CFG_HDS ${1}_hda.qcow2
-	vm_search ${1}_hda.qcow2
-      fi
-    fi
-  fi
-
-  if test "x$VMHDD" = "x"; then
-    echo KVM Image [$1] not found
-    return
-  fi
-
-  local VMRTIME="-m $CFG_RAM -cpu host"
-
-  case "$CFG_CPU" in
-    1) ;;
-    2) VMRTIME="$VMRTIME -smp 2,sockets=1,cores=1,threads=2" ;;
-    4) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=1" ;;
-    8) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=2" ;;
-    *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
-  esac
-
-  VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
-
-  case "$CFG_SCREEN" in
-    sdl) VMRTIME="$VMRTIME $VMMOUSE -display sdl,window_close=off -daemonize" 
-      echo "Switch to monitor window by ctrl-alt-2"
-      ;;
-    spice) 
-      local Instance=$(ps -e | grep qemu-system-x86 | wc -l)
-      VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
-      VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
-      remote-viewer spice://127.0.0.1:$VMSPICEPORT&
-      ;;
-    gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -no-quit -daemonize" ;;
-  esac
-
-  echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME
-  $RUN qemu-system-x86_64 -name \"$1\" $VMFLAGS $VMRTIME
 }
 
 list_iommu()
@@ -388,6 +336,70 @@ if [ "$#" = "0" ]; then
 fi
 
 export QEMU_AUDIO_DRV=pa
-vm_run "$1" "$CFG_ISO"
+echo "QEMU running on $(date)" > ${1}.log
 
+# Run the vmachine
+if test ! -e "$CFG_ISO"; then		# no installation is required
+  vm_search "$1"
+else
+  vm_cdrom "$CFG_ISO"
+  if test "x$VMHDD" = "x"; then
+    echo "$CFG_ISO: not an ISO image!"
+  else
+    vm_search "$1"
+    if test "x$VMDISK" = "x"; then
+      echo "Creating VM [$1] as qcow2, $CFG_HDS"
+      vm_create_disk $CFG_HDS ${1}_hda.qcow2
+      vm_search ${1}_hda.qcow2
+    fi
+  fi
+fi
+
+if test "x$VMHDD" = "x"; then
+  echo KVM Image [$1] not found
+  exit 1
+fi
+
+VMRTIME="-m $CFG_RAM -cpu host"
+
+case "$CFG_CPU" in
+  1) ;;
+  2) VMRTIME="$VMRTIME -smp 2,sockets=1,cores=1,threads=2" ;;
+  4) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=1" ;;
+  8) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=2" ;;
+  *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
+esac
+
+VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
+
+case "$CFG_SCREEN" in
+  sdl) VMRTIME="$VMRTIME $VMMOUSE -display sdl,window_close=off -daemonize" 
+    qemu-img snapshot -l "$VMDISK" | grep sdl > /dev/null
+    if test "x$?" = "x0"; then
+      VMRTIME="$VMRTIME -loadvm sdl"
+    fi
+    echo "Switch to monitor window by ctrl-alt-2"
+    ;;
+  spice) 
+    Instance=$(ps -e | grep qemu-system-x86 | wc -l)
+    VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
+    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
+    qemu-img snapshot -l "$VMDISK" | grep spice > /dev/null
+    if test "x$?" = "x0"; then
+      VMRTIME="$VMRTIME -loadvm spice"
+    fi
+    remote-viewer spice://127.0.0.1:$VMSPICEPORT&
+    ;;
+  gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -no-quit -daemonize" 
+    qemu-img snapshot -l "$VMDISK" | grep gtk > /dev/null
+    if test "x$?" = "x0"; then
+      VMRTIME="$VMRTIME -loadvm gtk"
+    fi
+    ;;
+esac
+
+echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME
+echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME >> ${1}.log
+
+$RUN qemu-system-x86_64 -name \"$1\" $VMFLAGS $VMRTIME
 
