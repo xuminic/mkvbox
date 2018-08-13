@@ -312,7 +312,7 @@ Install_Batch_cli()
   #### ifconfig/lspci/samba/... always needed
   Installer net-tools wget pciutils usbutils cifs-utils arj git p7zip arj zip unzip cpio bc expect
   case $CFG_SYS in
-    CENTOS) Installer hexedit ;;
+    CENTOS) Installer hexedit attr ;;
     DEBIAN) Installer aptitude ;;
     UBUNTU) Installer openssh-client ;;
     ARCHLINUX) Installer openssh ;;
