@@ -319,30 +319,38 @@ Install_Batch_cli()
   esac
 }
 
+# OPTIONS:
+#   filename:  output the .vimrc to (can be /dev/stdout)
 Install_Batch_vim()
 {
-  LogAs "\\nINSTALLING VIm"
-  Installer vim
+  local FOUT=$CHROOT/etc/skel/.vimrc
 
-  ### Link vi to vim as default
-  if test -e /usr/bin/vi; then
-    LogExec rm -f /usr/bin/vi
+  if test "x$1" != "x"; then
+    FOUT=$1
+  else
+    LogAs "\\nINSTALLING VIm"
+    Installer vim
+
+    ### Link vi to vim as default
+    if test -e /usr/bin/vi; then
+      LogExec rm -f /usr/bin/vi
+    fi
+    case $CFG_SYS in
+      CENTOS|ARCHLINUX)
+        if test -e /usr/bin/vim; then
+          LogExec ln -s /usr/bin/vim /usr/bin/vi
+        fi
+        ;;
+      DEBIAN|UBUNTU)
+        if test -e /etc/alternatives/vim; then
+          LogExec ln -s /etc/alternatives/vim /usr/bin/vi						   
+        fi
+        ;;
+    esac
   fi
-  case $CFG_SYS in
-    CENTOS|ARCHLINUX)
-      if test -e /usr/bin/vim; then
-        LogExec ln -s /usr/bin/vim /usr/bin/vi
-      fi
-      ;;
-    DEBIAN|UBUNTU)
-      if test -e /etc/alternatives/vim; then
-        LogExec ln -s /etc/alternatives/vim /usr/bin/vi						   
-      fi
-      ;;
-  esac
-  
+
   ### create a default vim profile
-  cat >  $CHROOT/etc/skel/.vimrc << VIMRC
+  cat > $FOUT << VIMRC
 runtime! vimrc_example.vim
 filetype indent on
 set autoindent
@@ -571,18 +579,24 @@ SMBCFG
   LogExec setsebool -P samba_enable_home_dirs on
 }
 
+# OPTIONS:
+#   filename:  output the .bashrc to (can be /dev/stdout)
 Install_Batch_bash()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
- 
-  LogAs "\\nINSTALLING the /etc/skel/.bashrc file."
+  local FOUT=$CHROOT/etc/skel/.bashrc
 
-  grep bc_cmdline /etc/skel/.bashrc > /dev/null
+  if test "x$1" != "x"; then
+    FOUT=$1
+  fi
+ 
+  LogAs "\\nINSTALLING the $FOUT file."
+
+  grep bc_cmdline $FOUT > /dev/null
   if test "x$?" = "x0"; then
     return
   fi
 
-  cat >> $CHROOT/etc/skel/.bashrc << BASHRC
+  cat >> $FOUT << BASHRC
   
 # If not running interactively, don't do anything
 [[ \$- != *i* ]] && return
@@ -594,10 +608,10 @@ PATH="\$PATH:\$HOME/bin:."
 # replace expr with the bc command line express
 bc_cmdline()
 {
-  if test "x$@" = "x"; then
+  if test "x\$@" = "x"; then
     echo A quick call to GNU bc, i.e., bcc EXPRESSIONS
   else
-    echo $@ | tr -d ',' | bc -l
+    echo \$@ | tr -d ',' | bc -l
   fi
 }
 
@@ -611,25 +625,18 @@ alias ll='ls -lh --color=auto'
 alias cp='cp -i'
 alias mv='mv -i'
 alias path='echo \$PATH'
-
 BASHRC
 
   case $CFG_SYS in
     CENTOS)
-      echo "alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'" \
-	      >> $CHROOT/etc/skel/.bashrc
-      echo "" >> $CHROOT/etc/skel/.bashrc
+      echo "alias which='alias | /usr/bin/which --tty-only --read-alias --show-dot --show-tilde'" >> $FOUT
       ;;
     DEBIAN|UBUNTU)
       ;;
     ARCHLINUX)
       ;;
   esac
-
-  if test "x$DEFUSER" != "x"; then
-    # Add user to group to access: the usb serial port
-    LogExec usermod -a -G dialout $DEFUSER
-  fi
+  echo "" >> $FOUT
 }
 
 Install_Batch_archlinux()
@@ -674,19 +681,46 @@ LOCALE
   LogExec sysctl -w kernel.core_pattern="core"
 }
 
+
+# OPTIONS:
+#  -s:    single user only
 Install_Batch_skel()
 {
-  LogExec cp /etc/skel/.bashrc /etc/skel/.vimrc ~
+  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+  local PROFILE="/etc/skel/.bashrc /etc/skel/.vimrc"
 
-  if test $(id -u) = 0 -a "x$1" = "x-a"; then
-    LogAs "\\nINSTALLING scripts in /etc/skel to all users"
-    local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
-    for i in $DEFUSER; do
-      LogExec sudo -u $i cp /etc/skel/.bashrc /etc/skel/.vimrc /home/$i
-    done
-  else
-    LogAs "\\nINSTALLING scripts in /etc/skel"
+  # installing the script to current user first
+  LogExec cp -f $PROFILE ~
+
+  if test $(id -u) != 0 || test "x$1" = "x-s"; then
+    # if user is not root, or specified the single user only flag
+    LogAs "\\nINSTALLING profiles from /etc/skel"
+    return
   fi
+
+  # only root can install the profiles to all users
+  LogAs "\\nINSTALLING profiles from /etc/skel to all users"
+  for i in $DEFUSER; do
+    LogExec sudo -u $i cp -f $PROFILE /home/$i
+  done
+}
+
+Install_Batch_group()
+{
+  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+
+  if test "x$DEFUSER" = "x"; then
+    return
+  fi
+
+  # Add user to group to access: the usb serial port
+  LogAs "\\nINSTALLING default user groups"
+  case $CFG_SYS in
+    CENTOS) LogExec usermod -a -G audio,video,wheel,cdrom,dialout $DEFUSER ;;
+    DEBIAN) LogExec usermod -a -G audio,video,wheel,cdrom,dialout,sudo,games $DEFUSER ;;
+    UBUNTU) ;;
+    ARCHLINUX) ;;
+  esac
 }
 
 Install_Batch_eth0()
@@ -1822,7 +1856,8 @@ fi
 #############################################################################
 # Setup the useful scripts
 #############################################################################
-Install_Batch_skel -a
+Install_Batch_skel
+Install_Batch_group
 report_exit 0
 
 

@@ -2,7 +2,29 @@
 
 Setup_Profile_bash()
 {
-  echo hello
+  grep bc_cmdline ~/.bashrc > /dev/null
+  if test "x$?" = "x0"; then
+    echo $HOME/.bashrc is already up-to-date.
+  else
+    grep bc_cmdline /etc/skel/.bashrc > /dev/null
+    if test "x$?" = "x0"; then
+      cp -f /etc/skel/.bashrc ~
+    else
+      ./mkvbox -i bash ~/.bashrc
+    fi
+  fi
+
+  grep noundofile ~/.vimrc > /dev/null
+  if test "x$?" = "x0"; then
+    echo $HOME/.vimrc is already up-to-date.
+  else
+    grep noundofile /etc/skel/.vimrc > /dev/null
+    if test "x$?" = "x0"; then
+      cp -f /etc/skel/.vimrc ~
+    else
+      ./mkvbox -i vim  ~/.vimrc
+    fi
+  fi
 }
 
 
