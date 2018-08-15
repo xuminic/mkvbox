@@ -41,17 +41,37 @@ VMIOMMU="-enable-kvm -machine pc,accel=kvm"
 
 VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
 
-VMMOUSE="-usb -device usb-tablet"
+VMUSB="-usb -device usb-tablet"
+#VMUSB="-usb -device usb-tablet -device usb-host,hostbus=3,hostaddr=8"
+
 VMSPICE="-device virtio-serial-pci \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
 	-chardev spicevmc,id=spicechannel0,name=vdagent"
 
-VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO $VMRNG"
+VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO $VMRNG $VMUSB"
 
 
 #############################################################################
 # System Support Group
 #############################################################################
+System()
+{
+  if test -e /etc/centos-release; then
+    echo "CENTOS"
+  elif test -e /etc/debian_version; then
+    grep Ubuntu /etc/os-release > /dev/null
+    if test "x$?" = "x0"; then
+      echo "UBUNTU"
+    else
+      echo "DEBIAN"
+    fi
+  elif test -e /etc/arch-release; then
+    echo "ARCHLINUX"
+  else
+    echo "UNKNOWN"
+  fi
+}
+
 # FIXME: qemu-system-x86_64 doesn't support l2-cache-size
 # qemu-system-x86_64: -drive file=vdisk_hda.kvm,l2-cache-size=2M: 
 #   could not open disk image vdisk_hda.kvm: Block format 'qcow2' used by 
@@ -270,6 +290,53 @@ vmdisk_umount()
   esac
 }
 
+vm_usb_device_on()
+{
+  if test "x$1" = "x"; then
+    local BUS=$(echo $CFG_USBP | cut -f1 -d,)
+    local ADDR=$(echo $CFG_USBP | cut -f2 -d,)
+  else
+    local BUS=$(echo $1 | cut -f1 -d,)
+    local ADDR=$(echo $1 | cut -f2 -d,)
+  fi
+
+  local USBDEV=$(printf "/dev/bus/usb/%03d/%03d" $BUS $ADDR)
+  local ID=$(id -nu)
+  
+  sudo chown $ID $USBDEV
+  if test "x$1" = "x"; then
+    echo "-device usb-host,hostbus=$BUS,hostaddr=$ADDR"
+  else
+    cat << USBON
+Device $USBDEV permission acquired:
+    $(ls -l $USBDEV)
+You may use (obseleted):
+    usb_add host:$BUS.$ADDR
+    usb_del $BUS.$ADDR
+Or:
+    device_add usb-host,id=ANYID,hostbus=$BUS,hostaddr=$ADDR
+    device_del ANYID
+In the QEMU monitor to plug and unplug the device.
+USBON
+  fi
+}
+
+vm_usb_device_off()
+{
+  if test "x$1" = "x"; then
+    local BUS=$(echo $CFG_USBP | cut -f1 -d,)
+    local ADDR=$(echo $CFG_USBP | cut -f2 -d,)
+  else
+    local BUS=$(echo $1 | cut -f1 -d,)
+    local ADDR=$(echo $1 | cut -f2 -d,)
+  fi
+  local USBDEV=$(printf "/dev/bus/usb/%03d/%03d" $BUS $ADDR)
+
+  echo "Recover the ownership of $USBDEV"
+  sudo chown root $USBDEV
+  ls -l $USBDEV
+}
+
 usage_exit()
 {
     cat << my_usage
@@ -280,6 +347,9 @@ OPTION:
   -d, --display=DISPLAY      Set display to [gtk/sdl/spice]
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
+  -u, --usb-pass=BUS,ADDR    Request USB device pass through (sudo)
+      --usb-add BUS,ADDR     Add the USB device for hotplug (sudo)
+      --usb-del BUS,ADDR     Release the USB device (sudo)
       --iommu                List the IOMMU Group
       --snapshot             List the known snapshots
       --vmdisk               List the VM disk volumn
@@ -314,6 +384,12 @@ while [ "$#" -gt 0 ]; do
 
     -s) CFG_HDS="$2"; shift;;
     --hdd-size=*) CFG_HDS="${1#*=}";;
+
+    -u) CFG_USBP="$2"; shift;;
+    --usb-pass=*) CFG_USBP="${1#*=}";;
+
+    --usb-add) vm_usb_device_on  $2; exit 0;;
+    --usb-del) vm_usb_device_off $2; exit 0;;
 
     --iommu) list_iommu; exit 0;;
 
@@ -370,10 +446,14 @@ case "$CFG_CPU" in
   *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
 esac
 
+if test "x$CFG_USBP" != "x"; then
+  VMRTIME="$VMRTIME $(vm_usb_device_on)"
+fi
+
 VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
 
 case "$CFG_SCREEN" in
-  sdl) VMRTIME="$VMRTIME $VMMOUSE -display sdl,window_close=off -daemonize" 
+  sdl) VMRTIME="$VMRTIME -display sdl,window_close=off -daemonize" 
     qemu-img snapshot -l "$VMDISK" | grep sdl > /dev/null
     if test "x$?" = "x0"; then
       VMRTIME="$VMRTIME -loadvm sdl"
@@ -390,7 +470,7 @@ case "$CFG_SCREEN" in
     fi
     remote-viewer spice://127.0.0.1:$VMSPICEPORT&
     ;;
-  gtk|*) VMRTIME="$VMRTIME $VMMOUSE -display gtk -no-quit -daemonize" 
+  gtk|*) VMRTIME="$VMRTIME -display gtk -no-quit -daemonize" 
     qemu-img snapshot -l "$VMDISK" | grep gtk > /dev/null
     if test "x$?" = "x0"; then
       VMRTIME="$VMRTIME -loadvm gtk"
