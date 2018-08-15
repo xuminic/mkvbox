@@ -8,6 +8,8 @@
 #   You need at least 2.1 for the kvm=off property.
 # * global variable can not be changed inside subshell access, ie, $(func arg)
 #   https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
+# * USB pass-through requires root privilege.
+#   https://serverfault.com/questions/666210/attaching-usb-dongle-to-kvm-vm
 #
 
 # debug only
@@ -22,6 +24,7 @@ CFG_CPU=1
 CFG_RAM=2G
 CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice/gtk
+CFG_USBP=               # "BUS,ADDR" pair
 
 #############################################################################
 # System definition
@@ -316,7 +319,10 @@ You may use (obseleted):
 Or:
     device_add usb-host,id=ANYID,hostbus=$BUS,hostaddr=$ADDR
     device_del ANYID
-In the QEMU monitor to plug and unplug the device.
+In the QEMU monitor to plug and unplug the device. Helpful commands also:
+    info usbhost
+    info usb
+
 USBON
   fi
 }
