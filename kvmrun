@@ -10,6 +10,8 @@
 #   https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
 # * USB pass-through requires root privilege.
 #   https://serverfault.com/questions/666210/attaching-usb-dongle-to-kvm-vm
+# * QEMU 2.0 doesn't support USB3.0 so do not use "-device qemu-xhci"
+#   https://github.com/qemu/qemu/blob/master/docs/usb2.txt
 #
 
 # debug only
@@ -44,8 +46,8 @@ VMIOMMU="-enable-kvm -machine pc,accel=kvm"
 
 VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
 
-VMUSB="-usb -device usb-tablet"
-#VMUSB="-usb -device usb-tablet -device usb-host,hostbus=3,hostaddr=8"
+#VMUSB="-device qemu-xhci -device usb-tablet"
+VMUSB="-usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
 
 VMSPICE="-device virtio-serial-pci \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
