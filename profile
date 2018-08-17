@@ -75,6 +75,13 @@ Setup_Profile_pidgin()
   fi
 }
 
+Setup_Profile_dropbox()
+{
+  if test -x /opt/dropbox/dropboxd; then
+    /opt/dropbox/dropboxd
+  fi
+}
+
 Setup_Profile_git()
 {
   # Initial my git references
@@ -120,9 +127,9 @@ if test ! -d $HOME/bin; then
   mkdir -p $HOME/bin
 fi
 
-if test "x$1" = "x--help" || test "x$1" = "x-H"; then
-  echo Option: $CFG_PROFILE | fold -s -w $(tput cols)
-elif test "x$1" = "x"; then
+if test "x$1" = "x--help" || test "x$1" = "x"; then
+  echo Option: [all] $CFG_PROFILE | fold -s -w $(tput cols)
+elif test "x$1" = "xall"; then
   # setup all profiles
   for i in $(echo $CFG_PROFILE);
   do

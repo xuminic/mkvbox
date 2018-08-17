@@ -79,6 +79,11 @@ System()
   fi
 }
 
+Qemu_Version()
+{
+  echo $(qemu-system-x86_64 --version | grep version | cut -f1 -d',' | cut -f4 -d' ')
+}
+
 # FIXME: qemu-system-x86_64 doesn't support l2-cache-size
 # qemu-system-x86_64: -drive file=vdisk_hda.kvm,l2-cache-size=2M: 
 #   could not open disk image vdisk_hda.kvm: Block format 'qcow2' used by 
