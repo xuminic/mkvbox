@@ -26,6 +26,8 @@ CFG_CPU=1
 CFG_RAM=2G
 CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice/gtk
+CFG_BLOCK=virtio	# virtio/ide
+CFG_NIC=virtio          # virtio/
 CFG_USBP=               # "BUS,ADDR" pair
 
 #############################################################################
@@ -112,8 +114,12 @@ add_drive()
     *) return ;;
   esac
 
-  echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
+  if test "x$CFG_BLOCK" = "xvirtio"; then
+    echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
 	  -device virtio-blk-pci,scsi=off,drive=ide${VMDRVID}"
+  else
+    echo "-drive file=\"${1}\",format=$TYPE${OPT_CACHE}"
+  fi
 } 
 
 vm_cdrom()
@@ -127,7 +133,7 @@ vm_cdrom()
   fi
 
   VMHDD="$VMHDD -drive if=none,format=raw,snapshot=on,id=cdrom0,file=\"${1}\" \
-	  -device ide-cd,drive=cdrom0"
+	  -device ide-cd,drive=cdrom0 -boot d"
 }
 
 
@@ -177,13 +183,14 @@ vm_search()
 add_nic()
 {
 
-    local nhash=$(echo "$1" | md5sum)
-    local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
-    local ndev="-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
-    #if test "x$CFG_SMB" != "x"; then
-    #  ndev="-net user,smb=$CFG_SMB $ndev"
-    #fi
-    echo $ndev
+  local nhash=$(echo "$1" | md5sum)
+  local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
+
+  if test "x$CFG_NIC" = "xvirtio"; then
+    echo "-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
+  else
+    echo "-net nic,macaddr=${macaddr}"
+  fi
 }
 
 
@@ -392,6 +399,8 @@ while [ "$#" -gt 0 ]; do
 
     -s) CFG_HDS="$2"; shift;;
     --hdd-size=*) CFG_HDS="${1#*=}";;
+
+    --novirtio) CFG_BLOCK="ide"; CFG_NIC="e1000" ;;
 
     -u) CFG_USBP="$2"; shift;;
     --usb-pass=*) CFG_USBP="${1#*=}";;
