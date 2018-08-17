@@ -123,7 +123,8 @@ add_drive()
     echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
 	  -device virtio-blk-pci,scsi=off,drive=ide${VMDRVID}"
   else
-    echo "-drive file=\"${1}\",format=$TYPE${OPT_CACHE}"
+    echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
+	  -device ide-hd,drive=ide${VMDRVID}"
   fi
 } 
 
@@ -194,7 +195,8 @@ add_nic()
   if test "x$CFG_NIC" = "xvirtio"; then
     echo "-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
   else
-    echo "-net nic,macaddr=${macaddr}"
+    #echo "-netdev user,id=net0 -device ne2k_pci,netdev=net0,mac=${macaddr}"
+    echo "-netdev user,id=net0 -device pcnet,netdev=net0,mac=${macaddr}"
   fi
 }
 
