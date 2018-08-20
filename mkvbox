@@ -113,6 +113,11 @@ System()
   fi
 }
 
+Users()
+{
+  grep '/home/' /etc/passwd | grep bash | cut -f1 -d':'
+}
+
 # Installer -g "Package Name", which is group install in CentOs
 Installer()
 {
@@ -469,7 +474,7 @@ Install_Batch_vsftpd()
 
 Install_Batch_samba()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+  local DEFUSER=$(Users)
 
   LogAs "\\nINSTALLING the SAMBA service."
   Installer samba samba-client
@@ -686,7 +691,6 @@ LOCALE
 #  -s:    single user only
 Install_Batch_skel()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
   local PROFILE="/etc/skel/.bashrc /etc/skel/.vimrc"
 
   # installing the script to current user first
@@ -700,14 +704,14 @@ Install_Batch_skel()
 
   # only root can install the profiles to all users
   LogAs "\\nINSTALLING profiles from /etc/skel to all users"
-  for i in $DEFUSER; do
+  for i in $(Users); do
     LogExec sudo -u $i cp -f $PROFILE /home/$i
   done
 }
 
 Install_Batch_group()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+  local DEFUSER=$(Users)
 
   if test "x$DEFUSER" = "x"; then
     return
@@ -1166,7 +1170,7 @@ GGLYUM
 
 Install_Batch_virtualbox()
 {
-  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+  local DEFUSER=$(Users)
   
   LogAs "\\nINSTALLING Oracle Repo Virtualbox"
   case $CFG_SYS in
@@ -1239,7 +1243,7 @@ Install_Batch_vbguest()
 {
   # FIXED: Most guest addition has problem with CentOS7.5/7.6. Only 5.2.x test builds work.
   # https://forums.virtualbox.org/viewtopic.php?f=3&t=87529
-  local DEFUSER=$(grep '/home/' /etc/passwd | grep bash | cut -f1 -d':')
+  local DEFUSER=$(Users)
 
   #install GNU GCC Compiler, kernel module and Development Environment
   LogAs "\\nINSTALLING Virtualbox Guest Addition"
@@ -1538,7 +1542,7 @@ Install_Batch_bluetooth()
   esac
 }
 
-Install_Batch_Dropbox
+Install_Batch_Dropbox()
 {
   LogAs "\\nINSTALLING Dropbox daemon"
 
@@ -1643,9 +1647,7 @@ XMON
       ;;
 
     *x*)
-      local WIDTH=$(echo $1 | cut -d'x' -f1)
-      local HEIGHT=$(echo $1 | cut -d'x' -f2)
-      local MODLINE=$(cvt $WIDTH $HEIGHT | grep Modeline | cut -d' ' -f2-)
+      local MODLINE=$(cvt $(echo $1 | tr 'x' ' ') | grep Modeline | cut -d' ' -f2-)
       local MODNAME=$(echo $MODLINE | cut -d'"' -f2)
       if test "x$MODLINE" != "x"; then
         # It must use eval, otherwise the quota char (") will become part of mode name
@@ -1796,6 +1798,9 @@ do
   CFG_INSTALL="$CFG_INSTALL $(echo $i | cut -d_ -f3- | cut -d\( -f1)"
 done
 CFG_INSTALL="$CFG_INSTALL "
+
+#echo $CFG_INSTALL | fold -s -w $(tput cols)
+#echo $(Users)
 
 # once for all in dry-run mode
 if test ! -d "$CHROOT/etc/skel"; then

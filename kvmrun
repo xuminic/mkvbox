@@ -26,17 +26,17 @@ CFG_CPU=1
 CFG_RAM=2G
 CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice/gtk
-CFG_BLOCK=virtio	# virtio/ide
-CFG_NIC=virtio          # virtio/
-CFG_USBP=               # "BUS,ADDR" pair
+CFG_VIRTIO=yes
+CFG_USBP=               # "BUS,ADDR" pair for usb pass-through
 
 #############################################################################
 # System definition
 #############################################################################
-# KVM Machine configurations
+# KVM Machine default configurations
 VMSPICEPORT=5930
 VMDRVID=0
 VMHDD=""
+VMNICMODL="pcnet"	# ne2k_pci,i82551,i82557b,i82559er,rtl8139,e1000,pcnet
 
 #VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
 #          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
@@ -46,16 +46,11 @@ VMAUDIO="-soundhw hda"
 #VMIOMMU="-enable-kvm -machine q35,accel=kvm"
 VMIOMMU="-enable-kvm -machine pc,accel=kvm"
 
-VMRNG="-object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
-
-#VMUSB="-device qemu-xhci -device usb-tablet"
-VMUSB="-usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
-
 VMSPICE="-device virtio-serial-pci \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
 	-chardev spicevmc,id=spicechannel0,name=vdagent"
 
-VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO $VMRNG $VMUSB"
+VMFLAGS="$VMIOMMU $VMVIDEO $VMAUDIO"
 
 
 #############################################################################
@@ -79,9 +74,23 @@ System()
   fi
 }
 
-Qemu_Version()
+
+# https://stackoverflow.com/questions/4023830/how-to-compare-two-strings-in-dot-separated-version-format-in-bash
+# Usage:
+# 1) if test $(Qemu_Version_match 2.0.1); then echo TRUE; else echo FALSE; fi
+# 2) Qemu_Version_match 2.0.1 > /dev/null
+#    echo $?
+Qemu_Version_match()
 {
-  echo $(qemu-system-x86_64 --version | grep version | cut -f1 -d',' | cut -f4 -d' ')
+  local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | cut -f1 -d',' | cut -f4 -d' ')
+  CURR=$(printf "%d%03d%03d%03d" $(echo $CURR | tr '.' ' '))
+
+  local WANT="0"		# if target version not specified
+  if test "x$1" != "x"; then
+    WANT=$(printf "%d%03d%03d%03d" $(echo $1 | tr '.' ' '))
+  fi
+  echo "$CURR -ge $WANT"
+  return $(expr $CURR \>= $WANT)
 }
 
 # FIXME: qemu-system-x86_64 doesn't support l2-cache-size
@@ -119,7 +128,7 @@ add_drive()
     *) return ;;
   esac
 
-  if test "x$CFG_BLOCK" = "xvirtio"; then
+  if test "x$CFG_VIRTIO" = "xyes"; then
     echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
 	  -device virtio-blk-pci,scsi=off,drive=ide${VMDRVID}"
   else
@@ -192,11 +201,10 @@ add_nic()
   local nhash=$(echo "$1" | md5sum)
   local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
 
-  if test "x$CFG_NIC" = "xvirtio"; then
+  if test "x$CFG_VIRTIO" = "xyes"; then
     echo "-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
   else
-    #echo "-netdev user,id=net0 -device ne2k_pci,netdev=net0,mac=${macaddr}"
-    echo "-netdev user,id=net0 -device pcnet,netdev=net0,mac=${macaddr}"
+    echo "-netdev user,id=net0 -device $VMNICMODL,netdev=net0,mac=${macaddr}"
   fi
 }
 
@@ -370,6 +378,9 @@ OPTION:
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
   -u, --usb-pass=BUS,ADDR    Request USB device pass through (sudo)
+
+$0 [COMMAND] [KVM_IMAGE_NAME]
+COMMAND:
       --usb-add BUS,ADDR     Add the USB device for hotplug (sudo)
       --usb-del BUS,ADDR     Release the USB device (sudo)
       --iommu                List the IOMMU Group
@@ -407,7 +418,7 @@ while [ "$#" -gt 0 ]; do
     -s) CFG_HDS="$2"; shift;;
     --hdd-size=*) CFG_HDS="${1#*=}";;
 
-    --novirtio) CFG_BLOCK="ide"; CFG_NIC="e1000" ;;
+    --novirtio) CFG_VIRTIO="no" ;;
 
     -u) CFG_USBP="$2"; shift;;
     --usb-pass=*) CFG_USBP="${1#*=}";;
@@ -423,7 +434,12 @@ while [ "$#" -gt 0 ]; do
     --mount) vmdisk_mount "$2"; exit 0;;
     --umount) vmdisk_umount "$2"; exit 0;;
 
+    ### TEST and DEBUG section
     --vnc) remote-viewer spice://127.0.0.1:5930; exit 0;;
+    --ver-cmp)
+        if test $(Qemu_Version_match $2); then echo TRUE; else echo false; fi
+	Qemu_Version_match $2; echo $?
+	exit 0;;
 
     -*) echo Unknown parameter [$@]; exit 1;;
     *) break;;
@@ -470,6 +486,20 @@ case "$CFG_CPU" in
   *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
 esac
 
+# Don't use that if virtio is not specified, especially in some old client like Windows XP/2000,
+# where no RNG device or virtio pci bus were supported.
+if test "x$CFG_VIRTIO" = "xyes"; then
+  VMRTIME="$VMRTIME -object rng-random,filename=/dev/random,id=rng0 -device virtio-rng-pci,rng=rng0"
+fi
+
+
+# USB3.0 requires QEMU 2.1.x
+# Otherwise rollback to USB2.0 and put usb-tablet in the bus of USB1.1
+if test $(Qemu_Version_match 2.1.0); then
+  VMRTIME="$VMRTIME -device qemu-xhci -device usb-tablet"
+else
+  VMRTIME="$VMRTIME -usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
+fi
 if test "x$CFG_USBP" != "x"; then
   VMRTIME="$VMRTIME $(vm_usb_device_on)"
 fi
