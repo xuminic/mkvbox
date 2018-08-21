@@ -12,6 +12,9 @@
 #   https://serverfault.com/questions/666210/attaching-usb-dongle-to-kvm-vm
 # * QEMU 2.0 doesn't support USB3.0 so do not use "-device qemu-xhci"
 #   https://github.com/qemu/qemu/blob/master/docs/usb2.txt
+# * Currently, you need to run qemu as root to use tun/tap networking 
+#   https://wiki.qemu.org/Documentation/Networking/NAT
+#   https://wiki.qemu.org/Documentation/Networking
 #
 
 # debug only
@@ -28,6 +31,7 @@ CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice/gtk
 CFG_VIRTIO=yes
 CFG_USBP=               # "BUS,ADDR" pair for usb pass-through
+CFG_NETWORK=tap         # tap,user,
 
 #############################################################################
 # System definition
@@ -200,12 +204,20 @@ add_nic()
 
   local nhash=$(echo "$1" | md5sum)
   local macaddr="52:54:${nhash:0:2}:${nhash:2:2}:${nhash:4:2}:${nhash:6:2}"
+  local mynet=""
+
+  if test "x$CFG_NETWORK" = "xtap"; then
+    mynet="$mynet -netdev tap,id=net0,ifname=tap0,script=no,downscript=no,vhost=on"
+  else
+    mynet="$mynet -netdev user,id=net0"
+  fi
 
   if test "x$CFG_VIRTIO" = "xyes"; then
-    echo "-netdev user,id=net0 -device virtio-net-pci,netdev=net0,mac=${macaddr}"
+    mynet="$mynet -device virtio-net-pci,netdev=net0,mac=${macaddr}"
   else
-    echo "-netdev user,id=net0 -device $VMNICMODL,netdev=net0,mac=${macaddr}"
+    mynet="$mynet -device $VMNICMODL,netdev=net0,mac=${macaddr}"
   fi
+  echo $mynet
 }
 
 

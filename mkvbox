@@ -207,6 +207,20 @@ Repo_Update_CentOS()
   #install Nux Dextop
   if test ! -e /etc/yum.repos.d/nux-dextop.repo; then
     LogExec rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
+
+    # appending nux-misc repo, for tunctl.
+    # this repo is default disabled, using it by 
+    #   yum --enablerepo=nux-misc install tunctl
+    cat >> $CHROOT/etc/yum.repos.d/nux-dextop.repo << NUXMISC
+
+[nux-misc]
+name=Nux Misc
+baseurl=http://li.nux.ro/download/nux/misc/el7/x86_64/
+enabled=0
+gpgcheck=1
+gpgkey=http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro
+
+NUXMISC
   fi
 
   #install RPM Fusion
@@ -1300,11 +1314,25 @@ Install_Batch_kvmhost()
 {
   LogAs "\\nINSTALLING KVM/QEMU Hypervisor"
 
+  # utilities for network tap devices
+  Installer bridge-utils iptables dnsmasq
+
   case $CFG_SYS in
-    CENTOS) Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 virt-viewer ;;
-    DEBIAN|UBUNTU) Installer qemu-kvm kvmtool virt-viewer ;;
+    CENTOS) 
+      Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 virt-viewer
+      Installer --enablerepo=nux-misc tunctl
+      #FIXME: where is VDE2?
+      ;;
+    DEBIAN|UBUNTU) 
+      Installer qemu-kvm kvmtool virt-viewer
+      Installer uml-utilities vde2
+      ;;
     ARCHLINUX) ;;
   esac
+
+  if ! test -e /etc/qemu-ifup; then
+    LogExec cp -f qemu-ifup /etc
+  fi
 }
 
 Install_Batch_kvmguest()
