@@ -31,7 +31,7 @@ CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice/gtk
 CFG_VIRTIO=yes
 CFG_USBP=               # "BUS,ADDR" pair for usb pass-through
-CFG_NETWORK=tap         # tap,user,
+CFG_NETWORK=user        # tap,user,
 
 #############################################################################
 # System definition
@@ -47,8 +47,8 @@ VMNICMODL="pcnet"	# ne2k_pci,i82551,i82557b,i82559er,rtl8139,e1000,pcnet
 VMVIDEO="-vga qxl"
 VMAUDIO="-soundhw hda"
 
-#VMIOMMU="-enable-kvm -machine q35,accel=kvm"
-VMIOMMU="-enable-kvm -machine pc,accel=kvm"
+VMIOMMU="-enable-kvm -machine q35,accel=kvm"
+#VMIOMMU="-enable-kvm -machine pc,accel=kvm"
 
 VMSPICE="-device virtio-serial-pci \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
@@ -379,6 +379,110 @@ vm_usb_device_off()
   ls -l $USBDEV
 }
 
+
+# see https://gist.github.com/extremecoders-re/e8fd8a67a515fee0c873dcafc81d811c
+# bridge-utils iptables dnsmasq tunctl must be installed priorily
+host_network_bridge_on()
+{
+  local NIC=$(ls -1 /sys/class/net | grep ^en)
+
+  if test "x$1" != "x"; then
+    ls -d /sys/class/net/$1 > /dev/null 2> /dev/null
+    if test "x$?" = "x0"; then
+      NIC=$1
+    else
+      echo network interface [$1] not found!
+      return
+    fi
+  fi
+
+  if test -e /sys/class/net/br0; then
+    echo Bridge device 'br0' already exists.
+    return
+  fi
+
+  # this function requires sudo/root priviledge
+  if test $(id -u) != "0"; then
+    echo root priviledge required.
+    return
+  fi
+
+  # Create a bridge
+  brctl addbr br0
+
+  # Clear IP of ethernet port
+  ip addr flush dev $NIC
+
+  # Add ethernet port to bridge
+  brctl addif br0 $NIC
+
+  # Create tap interface
+  # FIXME: root???
+  tunctl -t tap0 -u root
+
+  # Add tap0 to bridge
+  brctl addif br0 tap0
+
+  # Make sure everything is up
+  ifconfig $NIC up
+  ifconfig tap0 up
+  ifconfig br0 up
+
+  # Check if properly bridged
+  brctl show
+
+  # Assign ip to br0
+  dhclient -v br0
+}
+
+host_network_bridge_off()
+{
+  local NIC=$(ls -1 /sys/class/net | grep ^en)
+
+  if test "x$1" != "x"; then
+    ls -d /sys/class/net/$1 > /dev/null 2> /dev/null
+    if test "x$?" = "x0"; then
+      NIC=$1
+    else
+      echo network interface [$1] not found!
+      return
+    fi
+  fi
+
+  if test ! -e /sys/class/net/br0; then
+    echo Bridge device 'br0' does not exist.
+    return
+  fi
+
+
+  # this function requires sudo/root priviledge
+  if test $(id -u) != "0"; then
+    echo root priviledge required.
+    return
+  fi
+
+  # Remove tap interface tap0 from bridge br0
+  brctl delif br0 tap0
+
+  # Delete tap0
+  tunctl -d tap0
+
+  # Remove ethernet port from bridge
+  brctl delif br0 $NIC
+
+  # Bring bridge down
+  ifconfig br0 down
+
+  # Remove bridge
+  brctl delbr br0
+
+  # Bring ethernet port up
+  ifconfig $NIC up
+
+  # Check if an IP is assigned to ethernet port, if not request one
+  dhclient -v $NIC
+}
+
 usage_exit()
 {
     cat << my_usage
@@ -390,11 +494,14 @@ OPTION:
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
   -u, --usb-pass=BUS,ADDR    Request USB device pass through (sudo)
+      --novirtio             Disable the virtio devices
+      --tap                  Enable the tap device networking
 
 $0 [COMMAND] [KVM_IMAGE_NAME]
 COMMAND:
       --usb-add BUS,ADDR     Add the USB device for hotplug (sudo)
       --usb-del BUS,ADDR     Release the USB device (sudo)
+      --tapbridge on/off     turn on or off the network bridge in host machine
       --iommu                List the IOMMU Group
       --snapshot             List the known snapshots
       --vmdisk               List the VM disk volumn
@@ -430,13 +537,25 @@ while [ "$#" -gt 0 ]; do
     -s) CFG_HDS="$2"; shift;;
     --hdd-size=*) CFG_HDS="${1#*=}";;
 
-    --novirtio) CFG_VIRTIO="no" ;;
-
     -u) CFG_USBP="$2"; shift;;
     --usb-pass=*) CFG_USBP="${1#*=}";;
 
+    --novirtio) CFG_VIRTIO="no" ;;
+    --tap) CFG_NETWORK="tap" ;;
+
+    ######################################################################
+    # command section
+    ######################################################################
     --usb-add) vm_usb_device_on  $2; exit 0;;
     --usb-del) vm_usb_device_off $2; exit 0;;
+
+    --tapbridge)
+      if test "x$2" = "xon"; then
+        host_network_bridge_on $3
+      else
+        host_network_bridge_off $3
+      fi
+      exit 0;;
 
     --iommu) list_iommu; exit 0;;
 
@@ -507,8 +626,10 @@ fi
 
 # USB3.0 requires QEMU 2.1.x
 # Otherwise rollback to USB2.0 and put usb-tablet in the bus of USB1.1
+# FIXME: Debian 9/QEMU 2.9.x still missing qemu-xhci
 if test $(Qemu_Version_match 2.1.0); then
-  VMRTIME="$VMRTIME -device qemu-xhci -device usb-tablet"
+  #VMRTIME="$VMRTIME -device qemu-xhci -device usb-tablet"
+  VMRTIME="$VMRTIME -usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
 else
   VMRTIME="$VMRTIME -usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
 fi
@@ -544,8 +665,12 @@ case "$CFG_SCREEN" in
     ;;
 esac
 
-echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME
-echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME >> ${1}.log
+echo qemu-system-x86_64 -name "$1" $VMFLAGS $VMRTIME | tee -a ${1}.log
 
-$RUN qemu-system-x86_64 -name \"$1\" $VMFLAGS $VMRTIME
+# tap/bridge networking require sudo/root priviledge
+if test "$CFG_NETWORK" = "tap"; then
+  $RUN sudo qemu-system-x86_64 -name \"$1\" $VMFLAGS $VMRTIME
+else
+  $RUN qemu-system-x86_64 -name \"$1\" $VMFLAGS $VMRTIME
+fi
 
