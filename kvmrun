@@ -15,6 +15,7 @@
 # * Currently, you need to run qemu as root to use tun/tap networking 
 #   https://wiki.qemu.org/Documentation/Networking/NAT
 #   https://wiki.qemu.org/Documentation/Networking
+# * Windows XP doesn't support Q35 machine type
 #
 
 # debug only
@@ -47,8 +48,8 @@ VMNICMODL="pcnet"	# ne2k_pci,i82551,i82557b,i82559er,rtl8139,e1000,pcnet
 VMVIDEO="-vga qxl"
 VMAUDIO="-soundhw hda"
 
-VMIOMMU="-enable-kvm -machine q35,accel=kvm"
-#VMIOMMU="-enable-kvm -machine pc,accel=kvm"
+#VMIOMMU="-enable-kvm -machine q35,accel=kvm"
+VMIOMMU="-enable-kvm -machine pc,accel=kvm"
 
 VMSPICE="-device virtio-serial-pci \
 	-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
@@ -137,7 +138,7 @@ add_drive()
 	  -device virtio-blk-pci,scsi=off,drive=ide${VMDRVID}"
   else
     echo "-drive if=none${OPT_AIO},id=ide${VMDRVID},file=\"${1}\",format=$TYPE${OPT_CACHE} \
-	  -device ide-hd,drive=ide${VMDRVID}"
+	  -device ide-hd,bus=ide.2,drive=ide${VMDRVID}"
   fi
 } 
 
@@ -152,7 +153,7 @@ vm_cdrom()
   fi
 
   VMHDD="$VMHDD -drive if=none,format=raw,snapshot=on,id=cdrom0,file=\"${1}\" \
-	  -device ide-cd,drive=cdrom0 -boot d"
+	  -device ide-cd,bus=ide.1,drive=cdrom0 -boot d"
 }
 
 
@@ -606,6 +607,13 @@ if test "x$VMHDD" = "x"; then
   echo KVM Image [$1] not found
   exit 1
 fi
+
+# extra block devices
+#VMHDD="-drive if=none,format=raw,snapshot=on,id=cdrom1,file=\"../Downloads/vboximg/virtio-win-0.1.141.iso\" \
+#		-device ide-cd,drive=cdrom1 $VMHDD"
+#VMHDD="$VMHDD -drive if=none,id=idex0,file=\"reactos_hda.qcow2\",format=qcow2 \
+#		-device virtio-blk-pci,scsi=off,drive=idex0"
+
 
 VMRTIME="-m $CFG_RAM -cpu host"
 
