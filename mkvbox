@@ -329,7 +329,7 @@ Install_Batch_cli()
   LogAs "\\nINSTALLING generic CLI tools"
 
   #### ifconfig/lspci/samba/... always needed
-  Installer net-tools wget pciutils usbutils cifs-utils arj git p7zip arj zip unzip cpio bc expect
+  Installer net-tools wget pciutils usbutils cifs-utils arj git p7zip arj zip unzip cpio bc expect rar
   case $CFG_SYS in
     CENTOS) Installer hexedit attr ;;
     DEBIAN) Installer aptitude ;;
