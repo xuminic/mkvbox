@@ -17,8 +17,9 @@
 # https://userpages.uni-koblenz.de/~krienke/ftp/noarch/geteltorito/geteltorito/geteltorito.pl
 #
 # http://www.voidcn.com/article/p-movbdrjl-bcz.html
+# mkisofs -udf -b BOOT/BOOTSECT.BIN -no-emul-boot -c BOOT/boot.catalog -o ../winxp_en_sp4.iso \
+#	-boot-load-size 4 -no-iso-translate -iso-level 2 -D -V "WINXPVM" -relaxed-filenames -l -N .
 
-mkisofs -udf -b BOOT/BOOTSECT.BIN -no-emul-boot -c BOOT/boot.catalog -o ../winxp_en_sp4.iso \
-	-boot-load-size 4 -no-iso-translate -iso-level 2 -D -V "WINXPVM" -relaxed-filenames -l -N .
-
+mkisofs -b BOOT/BOOTSECT.BIN -no-emul-boot -c BOOT/BOOT.CAT -o ../winxp_en_sp4.iso \
+	-no-iso-translate -iso-level 2 -D -V "WINXPVM" -relaxed-filenames -l -N .
 
