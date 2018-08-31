@@ -31,8 +31,10 @@ CFG_RAM=2G
 CFG_HDS=16G
 CFG_SCREEN=sdl     	# sdl/spice/gtk
 CFG_VIRTIO=yes
+CFG_USBS=               # usb storage to ehci bus
 CFG_USBP=               # "BUS,ADDR" pair for usb pass-through
 CFG_NETWORK=user        # tap,user,
+CFG_PROFILE=            # winxp
 
 #############################################################################
 # System definition
@@ -107,6 +109,8 @@ Qemu_Version_match()
 #   could not open disk image kkk_hda.kvm: Could not read L1 table: Invalid argument
 # Note: Generally, do not use aio=native option along with cache=none for QEMU. 
 #   https://access.redhat.com/articles/41313
+# qemu: use "ide" as device name for implicit SATA controller on Q35
+#   https://www.redhat.com/archives/libvir-list/2013-September/msg01198.html
 # 
 # qemu [...] -drive if=none,id=drive0,format=raw -device virtio-blk-pci,drive=drive0,scsi=off ...
 add_drive()
@@ -493,12 +497,14 @@ usage_exit()
     cat << my_usage
 $0 [OPTION] KVM_IMAGE_NAME
 OPTION:
-  -i, --install=IMAGE        The installer ISO image
   -c, --cpu=NUM              Number of allocated CPU
   -d, --display=DISPLAY      Set display to [gtk/sdl/spice]
+  -i, --install=IMAGE        The installer ISO image
+  -p, --profile=PROFILE      Specify the VM profile
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
   -u, --usb-pass=BUS,ADDR    Request USB device pass through (sudo)
+      --usb-disk IMAGE       Insert a USB storage disk
       --novirtio             Disable the virtio devices
       --tap                  Enable the tap device networking
 
@@ -536,6 +542,9 @@ while [ "$#" -gt 0 ]; do
     -i) CFG_ISO="$2"; shift;;
     --install=*) CFG_ISO="${1#*=}";;
 
+    -p) CFG_PROFILE="$2"; shift;;
+    --profile=*) CFG_PROFILE="${1#*=}";;
+
     -r) CFG_RAM="$2"; shift;;
     --ram=*) CFG_RAM="${1#*=}";;
 
@@ -544,6 +553,20 @@ while [ "$#" -gt 0 ]; do
 
     -u) CFG_USBP="$2"; shift;;
     --usb-pass=*) CFG_USBP="${1#*=}";;
+
+    --usb-disk)
+      if test "x$2" = "x" -o "x${2:0:1}" = "x-"; then
+        cat << USBDISK
+Usage: --usb-disk usb-disk-image
+You may use the following command in the QEMU monitor later to access the USB storage
+  drive_add 0 if=none,id=usbdisk1,file=usb-disk-image
+  device_add usb-storage,bus=ehci.0,drive=usbdisk1 
+USBDISK
+	exit 0
+      elif test -e "$2"; then
+        CFG_USBS="$2"
+      fi
+      shift;;
 
     --novirtio) CFG_VIRTIO="no" ;;
     --tap) CFG_NETWORK="tap" ;;
@@ -582,6 +605,14 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+if test "x$CFG_PROFILE" = "x"; then
+  # the simplest way to find if the client is a windows xp box
+  echo $1 | grep [Ww]in.*[xX][pP] > /dev/null
+  if test "x$?" = "x0"; then
+    CFG_PROFILE="winxp"
+  fi
+fi
 
 if [ "$#" = "0" ]; then 
   usage_exit
@@ -637,9 +668,8 @@ case "$CFG_CPU" in
   *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
 esac
 
-# simplest to find if the client a windows xp box
-echo $1 | grep [Ww]in.*[xX][pP] > /dev/null
-if test "x$?" = "x0"; then
+
+if test "x$CFG_PROFILE" = "xwinxp"; then
   VMRTIME="$VMRTIME -enable-kvm -machine pc,accel=kvm $VMVIDEO -soundhw ac97"
 else
   VMRTIME="$VMRTIME $VMIOMMU $VMVIDEO $VMAUDIO"
@@ -651,7 +681,6 @@ else
   fi
 fi
 
-
 # USB3.0 requires QEMU 2.1.x
 # Otherwise rollback to USB2.0 and put usb-tablet in the bus of USB1.1
 # FIXME: Debian 9/QEMU 2.9.x still missing qemu-xhci
@@ -660,6 +689,10 @@ if test $(Qemu_Version_match 2.1.0); then
   VMRTIME="$VMRTIME -usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
 else
   VMRTIME="$VMRTIME -usb -device usb-ehci,id=ehci -device usb-tablet,bus=usb-bus.0"
+fi
+if test "x$CFG_USBS" != "x"; then
+  VMRTIME="$VMRTIME -drive if=none,id=usbkey1,file=$CFG_USBS"
+  VMRTIME="$VMRTIME -device usb-storage,bus=ehci.0,id=usbkey1,drive=usbkey1"
 fi
 if test "x$CFG_USBP" != "x"; then
   VMRTIME="$VMRTIME $(vm_usb_device_on)"
