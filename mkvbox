@@ -326,16 +326,18 @@ Install_Batch_repo()
 
 Install_Batch_cli()
 {
+  local VOLUMN="net-tools wget pciutils usbutils cifs-utils arj git p7zip zip unzip cpio bc expect"
+
   LogAs "\\nINSTALLING generic CLI tools"
 
   #### ifconfig/lspci/samba/... always needed
-  Installer net-tools wget pciutils usbutils cifs-utils arj git p7zip arj zip unzip cpio bc expect rar
   case $CFG_SYS in
-    CENTOS) Installer hexedit attr ;;
-    DEBIAN) Installer aptitude ;;
-    UBUNTU) Installer openssh-client ;;
-    ARCHLINUX) Installer openssh ;;
+    CENTOS) VOLUMN="$VOLUMN hexedit attr rar" ;;
+    DEBIAN) VOLUMN="$VOLUMN aptitude rar" ;;
+    UBUNTU) VOLUMN="$VOLUMN openssh-client rar" ;;
+    ARCHLINUX) VOLUMN="$VOLUMN openssh unrar" ;;
   esac
+  Installer $VOLUMN
 }
 
 # OPTIONS:
@@ -736,8 +738,8 @@ Install_Batch_group()
   case $CFG_SYS in
     CENTOS) LogExec usermod -a -G audio,video,wheel,cdrom,dialout $DEFUSER ;;
     DEBIAN) LogExec usermod -a -G audio,video,wheel,cdrom,dialout,sudo,games $DEFUSER ;;
-    UBUNTU) ;;
-    ARCHLINUX) ;;
+    UBUNTU) LogExec usermod -a -G audio,video,dialout $DEFUSER ;;
+    ARCHLINUX) LogExec usermod -a -G audio,video,wheel,optical,uucp $DEFUSER;;
   esac
 }
 
@@ -1010,12 +1012,15 @@ Install_Batch_xutil()
     Installer meld
   fi
 
+  # Archlinux has conflicts between vim and gvim so vim has to be removed first.
   if test -e /usr/bin/vim; then
     case $CFG_SYS in
       CENTOS) Installer vim-X11 ;;
       DEBIAN) Installer vim-gtk ;;
       UBUNTU) Installer vim-gtk ;;
-      ARCHLINUX) Installer gvim ;;
+      ARCHLINUX) 
+	pacman -Rs vim
+	Installer gvim ;;
     esac
   fi
 
@@ -1027,6 +1032,9 @@ Install_Batch_xutil()
     #### old style X fonts
     Installer xorg-fonts-100dpi xorg-fonts-75dpi
   fi
+
+  # required in Archlinux
+  Installer xorg-xrandr
 }
 
 Install_Batch_pulsa()
@@ -1115,7 +1123,7 @@ Install_Batch_chromium()
     CENTOS) Installer chromium chromedriver chromium-pepper-flash chrome-remote-desktop ;;
     DEBIAN) Installer chromium chromium-shell chromium-driver flashplayer-chromium ;;
     UBUNTU) Installer chromium-browser chromium-chromedriver chromium-ublock-origin ;;
-    ARCHLINUX) ;;
+    ARCHLINUX) Installer chromium ;;
   esac
 }
 
@@ -1380,7 +1388,7 @@ Install_Batch_pidgin()
     CENTOS) Installer pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts ;;
     DEBIAN) Installer pidgin pidgin-encryption pidgin-data pidgin-gnome-keyring pidgin-sipe ;;
     UBUNTU) Installer pidgin pidgin-encryption pidgin-data pidgin-sipe pidgin-skype ;;
-    ARCHLINUX) ;;
+    ARCHLINUX) Installer pidgin pidgin-sipe pidgin-otr libpurple ;;
   esac
 }
 
@@ -1413,7 +1421,7 @@ Install_Batch_vlc()
   case $CFG_SYS in
     CENTOS) Installer vlc vlc-extras vlc-plugin-jack ;;
     DEBIAN|UBUNTU) Installer vlc vlc-plugin-samba vlc-plugin-jack ;;
-    ARCHLINUX) ;;
+    ARCHLINUX) Installer vlc ;;
   esac
 
   # this font is for chinese subtitles in VLC
@@ -1443,7 +1451,8 @@ Install_Batch_gstreamer()
       gstreamer1.0-plugins-ugly gstreamer1.0-pulseaudio gstreamer1.0-tools"
       ;;
 
-    ARCHLINUX) ;;
+    ARCHLINUX) VOLUMN="$VOLUMN gstreamer gst-libav gst-plugins-bad gst-plugins-base \
+      gst-plugins-good gst-plugins-ugly" ;;
   esac
   if test "x$VOLUMN" != "x"; then
     Installer $VOLUMN
@@ -1566,7 +1575,7 @@ Install_Batch_bluetooth()
   case $CFG_SYS in
     CENTOS) Installer bluez pulseaudio-module-bluetooth bluez-tools ;;
     DEBIAN|UBUNTU) Installer blueman bluez pulseaudio-module-bluetooth bluez-tools bluez-firmware ;;
-    ARCHLINUX) ;;
+    ARCHLINUX) Installer blueman bluez pulseaudio-bluetooth bluez-tools bluez-firmware bluez-plugins;;
   esac
 }
 
@@ -1644,10 +1653,19 @@ TPADOFF
 
 Toggle_Screen()
 {
+  local OUTPUT=$(xrandr | grep "connected primary" | cut -f1 -d" ")
+  
+  if test "x$OUTPUT" = "x"; then
+    OUTPUT="Virtual-0"
+    if test "x$CFG_SYS" = "xARCHLINUX"; then
+      OUTPUT="Virtual-1"
+    fi
+  fi
+
   case "$1" in
-    1920x1080) xrandr --output Virtual-0 --mode 1920x1080 ;;
-    1280x1024) xrandr --output Virtual-0 --mode 1280x1024 ;;
-    1280x960) xrandr --output Virtual-0 --mode 1280x960 ;;
+    1920x1080) xrandr --output "$OUTPUT" --mode 1920x1080 ;;
+    1280x1024) xrandr --output "$OUTPUT" --mode 1280x1024 ;;
+    1280x960) xrandr --output "$OUTPUT" --mode 1280x960 ;;
 
     xinit)
       local DEVNAME="/usr/share/X11/xorg.conf.d/10-monitor.conf"
@@ -1662,7 +1680,7 @@ Toggle_Screen()
 # In QEMU/SDL window, the preferred solution is 1920x940
 # In QEMU/SPICE/remote-viewer window, the preferred solution is 1912x936
 Section "Monitor"
-    Identifier "Virtual-0 "
+    Identifier "$OUTPUT"
     Modeline "1920x960_60.00"  152.00  1920 2032 2232 2544  960 963 973 996 -hsync +vsync
     Modeline "1920x940_60.00"  148.75  1920 2032 2232 2544  940 943 953 976 -hsync +vsync
     Modeline "1920x800_60.00"  125.00  1920 2024 2216 2512  800 803 813 831 -hsync +vsync
@@ -1680,8 +1698,8 @@ XMON
       if test "x$MODLINE" != "x"; then
         # It must use eval, otherwise the quota char (") will become part of mode name
         eval xrandr --newmode $MODLINE
-        eval xrandr --addmode Virtual-0 $MODNAME
-        eval xrandr --output Virtual-0 --mode $MODNAME
+        eval xrandr --addmode "$OUTPUT" $MODNAME
+        eval xrandr --output "$OUTPUT" --mode $MODNAME
       fi
       ;;
   esac
