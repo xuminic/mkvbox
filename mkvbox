@@ -739,7 +739,7 @@ Install_Batch_group()
     CENTOS) LogExec usermod -a -G audio,video,wheel,cdrom,dialout $DEFUSER ;;
     DEBIAN) LogExec usermod -a -G audio,video,wheel,cdrom,dialout,sudo,games $DEFUSER ;;
     UBUNTU) LogExec usermod -a -G audio,video,dialout $DEFUSER ;;
-    ARCHLINUX) LogExec usermod -a -G audio,video,wheel,optical,uucp $DEFUSER;;
+    ARCHLINUX) LogExec usermod -a -G audio,video,wheel,optical,storage,uucp $DEFUSER ;;
   esac
 }
 
@@ -756,15 +756,19 @@ Install_Batch_eth0()
     return
   fi
 
-  LogExec mv -f /etc/default/grub /tmp/grub
-  if test "x$CHROOT" != "x"; then
-    LogAs "Disabling the Predictable Network Interface Names"
-  else
-    sed -e 's/^[#]*GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"net.ifnames=0 /1' \
-	    /tmp/grub > /etc/default/grub
-    LogExec update-grub
+  grep "GRUB_CMDLINE_LINUX=\"net.ifnames=0" /etc/default/grub
+  if test "x$?" != "x0"; then
+    LogExec mv -f /etc/default/grub /tmp/grub
+    if test "x$CHROOT" != "x"; then
+      LogAs "Disabling the Predictable Network Interface Names"
+    else
+      sed -e 's/^[#]*GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"net.ifnames=0 /1' \
+               /tmp/grub > /etc/default/grub
+      LogExec grub-mkconfig -o /boot/grub/grub.cfg
+      
+    fi
+    LogExec rm -f /tmp/grub
   fi
-  LogExec rm -f /tmp/grub
 
   case $CFG_SYS in
     CENTOS)
@@ -801,7 +805,16 @@ Install_Batch_eth0()
       done
       ;;
 
-    ARCHLINUX) ;;
+    ARCHLINUX)
+      LogExec mv -f /etc/netctl/ethernet-dhcp /tmp/interfaces
+      if test "x$CHROOT" != "x"; then
+	LogAs "Restore eth0 interface in $CFG_SYS"
+      else
+        sed 's/Interface=.*/Interface=eth0/1' /tmp/interfaces > /etc/netctl/ethernet-dhcp
+	netctl reenable ethernet-dhcp
+      fi
+      LogExec rm -f /tmp/interfaces
+      ;;
   esac
 }
 
@@ -1012,13 +1025,13 @@ Install_Batch_xutil()
     Installer meld
   fi
 
-  # Archlinux has conflicts between vim and gvim so vim has to be removed first.
   if test -e /usr/bin/vim; then
     case $CFG_SYS in
       CENTOS) Installer vim-X11 ;;
       DEBIAN) Installer vim-gtk ;;
       UBUNTU) Installer vim-gtk ;;
       ARCHLINUX) 
+        # Archlinux has conflicts between vim and gvim so vim has to be removed first.
 	pacman -Rs vim
 	Installer gvim ;;
     esac
@@ -1335,7 +1348,9 @@ Install_Batch_kvmhost()
       Installer qemu-kvm kvmtool virt-viewer
       Installer uml-utilities vde2
       ;;
-    ARCHLINUX) ;;
+    ARCHLINUX) 
+      Installer qemu vde2 libvirt virt-viewer 
+      ;;
   esac
 
   if ! test -e /etc/qemu-ifup; then
@@ -1365,15 +1380,27 @@ Install_Batch_remotetty()
 
   local VOLUMN="putty"
   case $CFG_SYS in
-    CENTOS) VOLUMN="$VOLUMN remmina remmina-plugins-vnc remmina-plugins-rdp" ;;
+    CENTOS) 
+      VOLUMN="$VOLUMN remmina remmina-plugins-vnc remmina-plugins-rdp" 
+      if test -e /usr/bin/srecord; then
+        VOLUMN="$VOLUMN cutecom"
+      fi
+      ;;
     DEBIAN) 
       VOLUMN="$VOLUMN vnc-viewer" 
       if test -e /usr/bin/srecord; then
         VOLUMN="$VOLUMN cutecom"
       fi
       ;;
-    UBUNTU) ;;
-    ARCHLINUX) ;;
+    UBUNTU) 
+      VOLUMN="$VOLUMN remmina remmina-plugins-vnc remmina-plugins-rdp remmina-plugins-spice" 
+      if test -e /usr/bin/srecord; then
+        VOLUMN="$VOLUMN cutecom"
+      fi
+      ;;
+    ARCHLINUX) 
+      VOLUMN="$VOLUMN tigervnc x11vnc remmina"
+      ;;
   esac
   if test "x$VOLUMN" != "x"; then
     Installer $VOLUMN
