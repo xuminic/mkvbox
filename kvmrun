@@ -34,7 +34,7 @@ CFG_VIRTIO=yes
 CFG_USBS=               # usb storage to ehci bus
 CFG_USBP=               # "BUS,ADDR" pair for usb pass-through
 CFG_NETWORK=user        # tap,user,
-CFG_PROFILE=            # winxp
+CFG_PROFILE=            # winxp, win7
 
 #############################################################################
 # System definition
@@ -43,7 +43,7 @@ CFG_PROFILE=            # winxp
 VMSPICEPORT=5930
 VMDRVID=0
 VMHDD=""
-VMNICMODL="pcnet"	# ne2k_pci,i82551,i82557b,i82559er,rtl8139,e1000,pcnet
+VMNICMODL="rtl8139"	# ne2k_pci,i82551,i82557b,i82559er,rtl8139,e1000,pcnet
 
 #VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
 #          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
@@ -611,6 +611,11 @@ if test "x$CFG_PROFILE" = "x"; then
   echo $1 | grep [Ww]in.*[xX][pP] > /dev/null
   if test "x$?" = "x0"; then
     CFG_PROFILE="winxp"
+  else
+    echo $1 | grep [Ww]in.*7 > /dev/null
+    if test "x$?" = "x0"; then
+      CFG_PROFILE="win7"
+    fi
   fi
 fi
 
@@ -640,9 +645,13 @@ else
     # because Windows could not recognize virtio driver so it will start
     # in non-virtio mode but include a dummy driver in virtio block device
     # so give Windows an opportunate to search the driver.
-    vm_create_disk $CFG_HDS dummy.qcow2
-    VMHDD="$VMHDD -drive if=none,id=idexp,file=\"dummy.qcow2\",format=qcow2 \
- 		-device virtio-blk-pci,scsi=off,drive=idexp"
+    case "$CFG_PROFILE" in
+      win*)
+        vm_create_disk $CFG_HDS dummy.qcow2
+        VMHDD="$VMHDD -drive if=none,id=idexp,file=\"dummy.qcow2\",format=qcow2 \
+ 	            -device virtio-blk-pci,scsi=off,drive=idexp"
+	;;
+    esac
   fi
 fi
 
