@@ -332,7 +332,7 @@ Install_Batch_cli()
 
   #### ifconfig/lspci/samba/... always needed
   case $CFG_SYS in
-    CENTOS) VOLUMN="$VOLUMN hexedit attr rar" ;;
+    CENTOS) VOLUMN="$VOLUMN hexedit attr unrar" ;;
     DEBIAN) VOLUMN="$VOLUMN aptitude rar" ;;
     UBUNTU) VOLUMN="$VOLUMN openssh-client rar" ;;
     ARCHLINUX) VOLUMN="$VOLUMN openssh unrar" ;;
