@@ -87,10 +87,11 @@ System()
 # 1) if test $(Qemu_Version_match 2.0.1); then echo TRUE; else echo FALSE; fi
 # 2) Qemu_Version_match 2.0.1 > /dev/null
 #    echo $?
+# 20180910: Debian version info: QEMU emulator version 2.0.0(Debian ...)
 Qemu_Version_match()
 {
-  local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | cut -f1 -d',' | cut -f4 -d' ')
-  CURR=$(printf "%d%03d%03d%03d" $(echo $CURR | tr '.' ' '))
+  local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | tr ",.)(" " " | cut -f4-7 -d' ')
+  CURR=$(printf "%d%03d%03d%03d" $CURR)
 
   local WANT="0"		# if target version not specified
   if test "x$1" != "x"; then
