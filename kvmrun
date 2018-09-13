@@ -16,6 +16,9 @@
 #   https://wiki.qemu.org/Documentation/Networking/NAT
 #   https://wiki.qemu.org/Documentation/Networking
 # * Windows XP doesn't support Q35 machine type
+# * DO NOT load snapshots automatically, which may make serious damage to your work.
+#   The snapshots also save the contents of the filesystem. When loading an old
+#   snapshot, the recent changes in your filesystem will be totally wiped out.
 #
 
 # debug only
@@ -712,27 +715,27 @@ VMRTIME="$VMRTIME $(add_nic ${1}) $VMHDD"
 
 case "$CFG_SCREEN" in
   sdl) VMRTIME="$VMRTIME -display sdl,window_close=off -daemonize" 
-    qemu-img snapshot -l "$VMDISK" | grep sdl > /dev/null
-    if test "x$?" = "x0"; then
-      VMRTIME="$VMRTIME -loadvm sdl"
-    fi
+    #qemu-img snapshot -l "$VMDISK" | grep sdl > /dev/null
+    #if test "x$?" = "x0"; then
+    #  VMRTIME="$VMRTIME -loadvm sdl"
+    #fi
     echo "Switch to monitor window by ctrl-alt-2"
     ;;
   spice) 
     Instance=$(ps -e | grep qemu-system-x86 | wc -l)
     VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
     VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
-    qemu-img snapshot -l "$VMDISK" | grep spice > /dev/null
-    if test "x$?" = "x0"; then
-      VMRTIME="$VMRTIME -loadvm spice"
-    fi
+    #qemu-img snapshot -l "$VMDISK" | grep spice > /dev/null
+    #if test "x$?" = "x0"; then
+    #  VMRTIME="$VMRTIME -loadvm spice"
+    #fi
     remote-viewer spice://127.0.0.1:$VMSPICEPORT&
     ;;
   gtk|*) VMRTIME="$VMRTIME -display gtk -no-quit -daemonize" 
-    qemu-img snapshot -l "$VMDISK" | grep gtk > /dev/null
-    if test "x$?" = "x0"; then
-      VMRTIME="$VMRTIME -loadvm gtk"
-    fi
+    #qemu-img snapshot -l "$VMDISK" | grep gtk > /dev/null
+    #if test "x$?" = "x0"; then
+    #  VMRTIME="$VMRTIME -loadvm gtk"
+    #fi
     ;;
 esac
 
