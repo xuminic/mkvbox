@@ -1097,7 +1097,8 @@ Install_Batch_firefox_qtm()
     exit
   fi
 
-  LogExec tar xfj $FFOX -C /opt 
+  LogExec tar jxf $FFOX -C /opt 
+  LogExec chown -R root:root /opt/firefox
   LogExec rm -f $FFOX
 
   # 20180723 steal the in-repo firefox causes problem and debian uses
@@ -1626,7 +1627,25 @@ Install_Batch_Dropbox()
     mkdir -p $CHROOT/opt/dropbox
   fi
   LogExec tar zxf $DRBOX -C /opt/dropbox --strip-components=1
+  LogExec chown -R root:root /opt/dropbox
+  LogExec cp ./bin/dropbox.png /opt/dropbox
   LogExec rm -f $DRBOX
+
+  # create the desktop entry file
+  if test ! -e /usr/share/applications/dropbox.desktop; then
+    cat > $CHROOT/usr/share/applications/dropbox.desktop << DROPBOX
+[Desktop Entry]
+Name=Dropbox
+GenericName=Network Storage
+Comment=Dropbox is a free service that lets you bring your photos, docs, and videos anywhere and share them easily
+Exec=/opt/dropbox/dropboxd
+Icon=/opt/dropbox/dropbox.png
+Terminal=false
+Type=Application
+Categories=Network;
+StartupNotify=false
+DROPBOX
+  fi
 }
 
 #############################################################################

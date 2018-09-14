@@ -69,7 +69,7 @@ Setup_Profile_pidgin()
       mkdir $HOME/.config/autostart
     fi
     if test ! -e $HOME/.config/autostart/pidgin.desktop; then
-      echo PIDGIN: auto start
+      echo PIDGIN: enable auto-start
       cp /usr/share/applications/pidgin.desktop $HOME/.config/autostart
     fi
   fi
@@ -77,9 +77,22 @@ Setup_Profile_pidgin()
 
 Setup_Profile_dropbox()
 {
-  if test -x /opt/dropbox/dropboxd; then
-    /opt/dropbox/dropboxd
+  # set dropbox to auto-start
+  if test -e /usr/share/applications/dropbox.desktop; then
+    if test ! -d $HOME/.config/autostart; then
+      mkdir $HOME/.config/autostart
+    fi
+    if test ! -e $HOME/.config/autostart/dropbox.desktop; then
+      echo DROPBOX: enable auto-start
+      cp /usr/share/applications/dropbox.desktop $HOME/.config/autostart
+    fi
   fi
+
+  # start the dropbox
+  #if test -x /opt/dropbox/dropboxd; then
+  #  echo DROPBOX: starting
+  #  /opt/dropbox/dropboxd &
+  #fi
 }
 
 Setup_Profile_git()
