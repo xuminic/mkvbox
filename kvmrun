@@ -729,6 +729,7 @@ case "$CFG_SCREEN" in
     #if test "x$?" = "x0"; then
     #  VMRTIME="$VMRTIME -loadvm spice"
     #fi
+    echo "remote-viewer spice://127.0.0.1:$VMSPICEPORT &"
     remote-viewer spice://127.0.0.1:$VMSPICEPORT&
     ;;
   gtk|*) VMRTIME="$VMRTIME -display gtk -no-quit -daemonize" 
