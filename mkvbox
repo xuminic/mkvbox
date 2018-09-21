@@ -387,7 +387,7 @@ Install_Batch_devel()
   LogAs "\\nINSTALLING Basic Development packages (C/C++)"
   case $CFG_SYS in
     CENTOS) Installer -g "Development Tools" ;;
-    DEBIAN|UBUNTU) Installer build-essential manpages-dev ;;
+    DEBIAN|UBUNTU) Installer build-essential manpages-dev pkg-config;;
     ARCHLINUX) Installer base-devel ;;
   esac
 }
@@ -493,7 +493,7 @@ Install_Batch_samba()
   local DEFUSER=$(Users)
 
   LogAs "\\nINSTALLING the SAMBA service."
-  Installer samba samba-client
+  Installer samba samba-client smbnetfs
 
   grep mkvbox /etc/samba/smb.conf > /dev/null
   if test "x$?" != "x0"; then
@@ -558,7 +558,6 @@ SMBCFG
   if test ! -d /var/samba; then
     LogExec mkdir -p  /var/samba
     LogExec chmod 1777 /var/samba
-    LogExec chcon -t samba_share_t /var/samba
   fi
   if test ! -d /var/lib/samba/usershares; then
     LogExec mkdir -p /var/lib/samba/usershares
@@ -577,10 +576,15 @@ SMBCFG
   # start the service
   case $CFG_SYS in
     CENTOS|ARCHLINUX)
+      LogExec chcon -t samba_share_t /var/samba
       LogExec systemctl enable smb.service
       LogExec systemctl enable nmb.service
       LogExec systemctl restart smb.service
       LogExec systemctl restart nmb.service
+
+      # SELinux settings
+      LogExec setsebool -P samba_domain_controller on
+      LogExec setsebool -P samba_enable_home_dirs on
       ;;
     DEBIAN|UBUNTU)
       LogExec systemctl enable smbd
@@ -594,10 +598,6 @@ SMBCFG
     LogExec firewall-cmd --permanent --zone=public --add-service=samba
     LogExec firewall-cmd --reload
   fi
-
-  # SELinux settings
-  LogExec setsebool -P samba_domain_controller on
-  LogExec setsebool -P samba_enable_home_dirs on
 }
 
 # OPTIONS:
