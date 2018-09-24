@@ -1089,7 +1089,7 @@ Install_Batch_firefox_qtm()
     return
   fi
 
-  LogExec wget --content-disposition \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
+  LogExec wget --content-disposition --progress=dot:giga \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
 
   local FFOX=$(ls firefox-*)
   if test ! -e "$FFOX"; then
@@ -1607,14 +1607,14 @@ Install_Batch_bluetooth()
   esac
 }
 
-Install_Batch_Dropbox()
+Install_Batch_dropbox()
 {
   LogAs "\\nINSTALLING Dropbox daemon"
 
   if test "$(uname -m)" = "x86_64"; then
-    LogExec wget --content-disposition \"https://www.dropbox.com/download?plat=lnx.x86_64\"
+    LogExec wget --content-disposition --progress=dot:giga \"https://www.dropbox.com/download?plat=lnx.x86_64\"
   else
-    LogExec wget --content-disposition \"https://www.dropbox.com/download?plat=lnx.x86\"
+    LogExec wget --content-disposition --progress=dot:giga \"https://www.dropbox.com/download?plat=lnx.x86\"
   fi
 
   local DRBOX=$(ls dropbox-lnx.*.tar.gz)
