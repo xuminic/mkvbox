@@ -737,7 +737,7 @@ Install_Batch_group()
   LogAs "\\nINSTALLING default user groups"
   case $CFG_SYS in
     CENTOS) LogExec usermod -a -G audio,video,wheel,cdrom,dialout $DEFUSER ;;
-    DEBIAN) LogExec usermod -a -G audio,video,wheel,cdrom,dialout,sudo,games $DEFUSER ;;
+    DEBIAN) LogExec usermod -a -G audio,video,cdrom,dialout,sudo,games $DEFUSER ;;
     UBUNTU) LogExec usermod -a -G audio,video,dialout $DEFUSER ;;
     ARCHLINUX) LogExec usermod -a -G audio,video,wheel,optical,storage,uucp $DEFUSER ;;
   esac
@@ -1047,7 +1047,9 @@ Install_Batch_xutil()
   fi
 
   # required in Archlinux
-  Installer xorg-xrandr
+  if test "$CFG_SYS" = "ARCHLINUX"; then
+    Installer xorg-xrandr
+  fi
 }
 
 Install_Batch_pulsa()
@@ -1135,7 +1137,8 @@ Install_Batch_chromium()
   LogAs "\\nINSTALLING Open Source Chromium"
   case $CFG_SYS in
     CENTOS) Installer chromium chromedriver chromium-pepper-flash chrome-remote-desktop ;;
-    DEBIAN) Installer chromium chromium-shell chromium-driver flashplayer-chromium ;;
+    #DEBIAN) Installer chromium chromium-shell chromium-driver flashplayer-chromium ;;
+    DEBIAN) Installer chromium flashplayer-chromium ;;
     UBUNTU) Installer chromium-browser chromium-chromedriver chromium-ublock-origin ;;
     ARCHLINUX) Installer chromium ;;
   esac
