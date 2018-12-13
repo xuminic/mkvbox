@@ -94,11 +94,11 @@ System()
 Qemu_Version_match()
 {
   local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | tr ",.)(" " " | cut -f4-7 -d' ')
-  CURR=$(printf "%d%03d%03d%03d" $CURR)
+  CURR=$(printf "%d%03d%03d" $CURR)
 
   local WANT="0"		# if target version not specified
   if test "x$1" != "x"; then
-    WANT=$(printf "%d%03d%03d%03d" $(echo $1 | tr '.' ' '))
+    WANT=$(printf "%d%03d%03d" $(echo $1 | tr '.' ' '))
   fi
   echo "$CURR -ge $WANT"
   return $(expr $CURR \>= $WANT)
@@ -721,22 +721,24 @@ case "$CFG_SCREEN" in
     #fi
     echo "Switch to monitor window by ctrl-alt-2"
     ;;
-  spice) 
+  gtk) VMRTIME="$VMRTIME -display gtk -no-quit -daemonize" 
+    #qemu-img snapshot -l "$VMDISK" | grep gtk > /dev/null
+    #if test "x$?" = "x0"; then
+    #  VMRTIME="$VMRTIME -loadvm gtk"
+    #fi
+    ;;
+  spice|*) 
     Instance=$(ps -e | grep qemu-system-x86 | wc -l)
     VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
-    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing -monitor stdio"
+    #VMONITOR="-monitor stdio"
+    VMONITOR="-monitor tcp:127.0.0.1:1$VMSPICEPORT,server,nowait"
+    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing $VMONITOR -daemonize"
     #qemu-img snapshot -l "$VMDISK" | grep spice > /dev/null
     #if test "x$?" = "x0"; then
     #  VMRTIME="$VMRTIME -loadvm spice"
     #fi
     echo "remote-viewer spice://127.0.0.1:$VMSPICEPORT &"
     remote-viewer spice://127.0.0.1:$VMSPICEPORT&
-    ;;
-  gtk|*) VMRTIME="$VMRTIME -display gtk -no-quit -daemonize" 
-    #qemu-img snapshot -l "$VMDISK" | grep gtk > /dev/null
-    #if test "x$?" = "x0"; then
-    #  VMRTIME="$VMRTIME -loadvm gtk"
-    #fi
     ;;
 esac
 
