@@ -93,7 +93,7 @@ System()
 # 20180910: Debian version info: QEMU emulator version 2.0.0(Debian ...)
 Qemu_Version_match()
 {
-  local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | tr ",.)(" " " | cut -f4-7 -d' ')
+  local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | tr ",.)(" " " | cut -f4-6 -d' ')
   CURR=$(printf "%d%03d%03d" $CURR)
 
   local WANT="0"		# if target version not specified
@@ -522,6 +522,7 @@ COMMAND:
       --vmdisk               List the VM disk volumn
       --mount                Mount the VM disk image
       --umount               Umount the VM disk image
+      --vnc [port]           Reconnect the remote viewer
 
 KVM_IMAGE_NAME is the base name of the KVM virtual machine.
 The correspondent image is KVM_IMAGE_NAME_hda.kvm.
@@ -597,8 +598,15 @@ USBDISK
     --mount) vmdisk_mount "$2"; exit 0;;
     --umount) vmdisk_umount "$2"; exit 0;;
 
+    --vnc) 
+      if test "x$2" = "x"; then
+	ps auxw | grep qemu-system
+      else
+	remote-viewer spice://127.0.0.1:$2 &
+      fi
+      exit 0;;
+
     ### TEST and DEBUG section
-    --vnc) remote-viewer spice://127.0.0.1:5930; exit 0;;
     --ver-cmp)
         if test $(Qemu_Version_match $2); then echo TRUE; else echo false; fi
 	Qemu_Version_match $2; echo $?
@@ -730,9 +738,10 @@ case "$CFG_SCREEN" in
   spice|*) 
     Instance=$(ps -e | grep qemu-system-x86 | wc -l)
     VMSPICEPORT=$(expr $VMSPICEPORT + $Instance)
+    #https://unix.stackexchange.com/questions/426652/connect-to-running-qemu-instance-with-qemu-monitor
     #VMONITOR="-monitor stdio"
-    VMONITOR="-monitor tcp:127.0.0.1:1$VMSPICEPORT,server,nowait"
-    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing $VMONITOR -daemonize"
+    VMONITOR="-monitor tcp:127.0.0.1:1$VMSPICEPORT,server,nowait -daemonize"
+    VMRTIME="$VMRTIME $VMSPICE -spice port=$VMSPICEPORT,disable-ticketing $VMONITOR"
     #qemu-img snapshot -l "$VMDISK" | grep spice > /dev/null
     #if test "x$?" = "x0"; then
     #  VMRTIME="$VMRTIME -loadvm spice"
