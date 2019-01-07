@@ -505,6 +505,7 @@ OPTION:
   -d, --display=DISPLAY      Set display to [gtk/sdl/spice]
   -i, --install=IMAGE        The installer ISO image
   -p, --profile=PROFILE      Specify the VM profile
+  -q  [pc,q35]               Specify the machine type
   -r, --ram=RAM              Define the size of RAM [2G]
   -s, --hdd-size=SIZE        Define the size of hard disks [16G]
   -u, --usb-pass=BUS,ADDR    Request USB device pass through (sudo)
@@ -549,6 +550,14 @@ while [ "$#" -gt 0 ]; do
 
     -p) CFG_PROFILE="$2"; shift;;
     --profile=*) CFG_PROFILE="${1#*=}";;
+
+    -q) 
+      if test "x$2" = "xpc"; then
+        VMIOMMU="-enable-kvm -machine pc,accel=kvm"
+      elif test "x$2" = "xq35"; then
+        VMIOMMU="-enable-kvm -machine q35,accel=kvm"
+      fi
+      shift;;
 
     -r) CFG_RAM="$2"; shift;;
     --ram=*) CFG_RAM="${1#*=}";;
