@@ -384,10 +384,10 @@ VIMRC
 
 Install_Batch_devel()
 {
-  LogAs "\\nINSTALLING Basic Development packages (C/C++)"
+  LogAs "\\nINSTALLING Basic Development packages (C/C++/GO)"
   case $CFG_SYS in
     CENTOS) Installer -g "Development Tools" ;;
-    DEBIAN|UBUNTU) Installer build-essential manpages-dev pkg-config;;
+    DEBIAN|UBUNTU) Installer build-essential manpages-dev pkg-config golang-go ;;
     ARCHLINUX) Installer base-devel ;;
   esac
 }
@@ -1737,8 +1737,10 @@ Toggle_Screen()
 # The host screen is 1920x1080, so
 # In QEMU/SDL window, the preferred solution is 1920x940
 # In QEMU/SPICE/remote-viewer window, the preferred solution is 1912x936
+# In QEMU/SPICE/remote-viewer window + DELL 24" 1920x1200, is 1920x1120
 Section "Monitor"
     Identifier "$OUTPUT"
+    Modeline "1920x1120_60.00"  179.25  1920 2048 2248 2576  1120 1123 1133 1162 -hsync +vsync
     Modeline "1920x960_60.00"  152.00  1920 2032 2232 2544  960 963 973 996 -hsync +vsync
     Modeline "1920x940_60.00"  148.75  1920 2032 2232 2544  940 943 953 976 -hsync +vsync
     Modeline "1920x800_60.00"  125.00  1920 2024 2216 2512  800 803 813 831 -hsync +vsync
