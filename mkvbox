@@ -1721,10 +1721,6 @@ Toggle_Screen()
   fi
 
   case "$1" in
-    1920x1080) xrandr --output "$OUTPUT" --mode 1920x1080 ;;
-    1280x1024) xrandr --output "$OUTPUT" --mode 1280x1024 ;;
-    1280x960) xrandr --output "$OUTPUT" --mode 1280x960 ;;
-
     xinit)
       local DEVNAME="/usr/share/X11/xorg.conf.d/10-monitor.conf"
       LogAs "Adding modeline to $DEVNAME"
@@ -1753,14 +1749,22 @@ XMON
       ;;
 
     *x*)
-      local MODLINE=$(cvt $(echo $1 | tr 'x' ' ') | grep Modeline | cut -d' ' -f2-)
-      local MODNAME=$(echo $MODLINE | cut -d'"' -f2)
-      if test "x$MODLINE" != "x"; then
-        # It must use eval, otherwise the quota char (") will become part of mode name
-        eval xrandr --newmode $MODLINE
-        eval xrandr --addmode "$OUTPUT" $MODNAME
-        eval xrandr --output "$OUTPUT" --mode $MODNAME
+      local MODNAME=$(xrandr | grep "^   " | grep -m1 1912x936 | cut -f4 -d' ')
+      if test "x$MODNAME" != "x"; then
+        xrandr --output "$OUTPUT" --mode $MODNAME
+      else
+        local MODLINE=$(cvt $(echo $1 | tr 'x' ' ') | grep Modeline | cut -d' ' -f2-)
+        local MODNAME=$(echo $MODLINE | cut -d'"' -f2)
+        if test "x$MODLINE" != "x"; then
+          # It must use eval, otherwise the quota char (") will become part of mode name
+          eval xrandr --newmode $MODLINE
+          eval xrandr --addmode "$OUTPUT" $MODNAME
+          eval xrandr --output "$OUTPUT" --mode $MODNAME
+        fi
       fi
+      ;;
+    *)
+      xrandr
       ;;
   esac
 }
