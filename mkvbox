@@ -386,10 +386,32 @@ Install_Batch_devel()
 {
   LogAs "\\nINSTALLING Basic Development packages (C/C++/GO)"
   case $CFG_SYS in
-    CENTOS) Installer -g "Development Tools" ;;
-    DEBIAN|UBUNTU) Installer build-essential manpages-dev pkg-config golang-go ;;
-    ARCHLINUX) Installer base-devel ;;
+    CENTOS) 
+      Installer -g "Development Tools" 
+      Installer gcc-go 
+      ;;
+    DEBIAN|UBUNTU) Installer build-essential manpages-dev pkg-config gccgo ;;
+    ARCHLINUX) Installer base-devel gcc-go ;;
   esac
+
+  # Download and install the lastest GO from its official site
+  # https://golang.org/dl/
+  file $(which bash) | grep "ELF 64-bit" > /dev/null
+  if test "x$?" = "x0"; then
+    local URL="https://dl.google.com/go/go1.11.4.linux-amd64.tar.gz"
+  else
+    local URL="https://dl.google.com/go/go1.11.4.linux-386.tar.gz"
+  fi
+  LogExec wget --progress=dot:giga $URL
+  URL=$(ls go1.11.*)
+  if test ! -e "$URL"; then
+    LogAs "ERROR: Go release not downloaded!"
+    exit
+  fi
+
+  LogExec tar zxf $URL -C /opt
+  LogExec chown -R root:root /opt/go
+  LogExec rm -f $URL
 }
 
 Install_Batch_libffmpeg()
@@ -1100,17 +1122,27 @@ Install_Batch_firefox_qtm()
     return
   fi
 
-  LogExec wget --content-disposition --progress=dot:giga \"https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US\"
+  file $(which bash) | grep "ELF 64-bit" > /dev/null
+  if test "x$?" = "x0"; then
+    local URL="https://download.mozilla.org/?product=firefox-latest\&os=linux64\&lang=en-US"
+  else
+    local URL="https://download.mozilla.org/?product=firefox-latest\&os=linux\&lang=en-US"
+  fi
+  LogExec wget --content-disposition --progress=dot:giga $URL 
 
-  local FFOX=$(ls firefox-*)
-  if test ! -e "$FFOX"; then
+  local URL=$(ls firefox-*)
+  if test ! -e "$URL"; then
     LogAs "ERROR: firefox not downloaded!"
     exit
   fi
 
-  LogExec tar jxf $FFOX -C /opt 
+  if test -d /opt/firefox; then
+    LogAs "Removing the previous Firefox Quantum"
+    LogExec rm -rf /opt/firefox
+  fi
+  LogExec tar jxf $URL -C /opt 
   LogExec chown -R root:root /opt/firefox
-  LogExec rm -f $FFOX
+  LogExec rm -f $URL
 
   # 20180723 steal the in-repo firefox causes problem and debian uses
   # firefox-esr anyway, create a standalone menu entry may be better. 
@@ -1623,14 +1655,16 @@ Install_Batch_dropbox()
 {
   LogAs "\\nINSTALLING Dropbox daemon"
 
-  if test "$(uname -m)" = "x86_64"; then
-    LogExec wget --content-disposition --progress=dot:giga \"https://www.dropbox.com/download?plat=lnx.x86_64\"
+  file $(which bash) | grep "ELF 64-bit" > /dev/null
+  if test "x$?" = "x0"; then
+    local URL="https://www.dropbox.com/download?plat=lnx.x86_64"
   else
-    LogExec wget --content-disposition --progress=dot:giga \"https://www.dropbox.com/download?plat=lnx.x86\"
+    local URL="https://www.dropbox.com/download?plat=lnx.x86"
   fi
+  LogExec wget --content-disposition --progress=dot:giga $URL
 
-  local DRBOX=$(ls dropbox-lnx.*.tar.gz)
-  if test ! -e "$DRBOX"; then
+  local URL=$(ls dropbox-lnx.*.tar.gz)
+  if test ! -e "$URL"; then
     LogAs "ERROR: dropbox daemon not downloaded!"
     exit
   fi
@@ -1638,10 +1672,10 @@ Install_Batch_dropbox()
   if test ! -d "$CHROOT/opt/dropbox"; then
     mkdir -p $CHROOT/opt/dropbox
   fi
-  LogExec tar zxf $DRBOX -C /opt/dropbox --strip-components=1
+  LogExec tar zxf $URL -C /opt/dropbox --strip-components=1
   LogExec chown -R root:root /opt/dropbox
   LogExec cp ./bin/dropbox.png /opt/dropbox
-  LogExec rm -f $DRBOX
+  LogExec rm -f $URL
 
   # create the desktop entry file
   if test ! -e /usr/share/applications/dropbox.desktop; then
