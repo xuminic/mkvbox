@@ -22,6 +22,7 @@
 # * Debian 8 seems not pretty well to handle Intel(R) Core(TM) i7-7500U as the host.
 #   It caused loads of "NMI received for unknown reason 21/31 on CPU 0" events at
 #   every terminals. Using "-cpu kvm64" can workaround.
+#   https://www.spinics.net/lists/kvm/msg94595.html
 #
 
 # debug only

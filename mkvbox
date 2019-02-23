@@ -1010,7 +1010,22 @@ Install_Batch_xorg()
       #systemctl isolate graphical.target
       LogExec systemctl set-default graphical.target
       ;;
-    DEBIAN|UBUNTU) Installer xinit ;;
+    DEBIAN|UBUNTU) 
+      Installer xinit
+      # Debain 8 need to disable the surface for qxl driver
+      if test $(cat /etc/debian_version | cut -d. -f1) = "8"; then
+        if test ! -e "/usr/share/X11/xorg.conf.d/50-qxl.conf"
+          LogAs "Added workaround of QXL driver for Debian 8"
+	  cat > /usr/share/X11/xorg.conf.d/50-qxl.conf << QXLWRD
+Section "Device"
+	Identifier  "qxl"
+	Driver      "qxl"
+	Option	    "ENABLE_SURFACES" "False"
+EndSection
+QXLWRD
+        fi
+      fi
+      ;;
     ARCHLINUX) Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera ;;
   esac
 
@@ -1853,8 +1868,12 @@ xconfigure()
   # It was trying to fix the pluma flickering issue in QXL/SDL window
   # https://askubuntu.com/questions/895558/screen-flickering-when-i-run-commands-in-gnome-terminal
   # however it didn't work, though the configure file might be useful later
+  local QxlID="/usr/share/X11/xorg.conf.d/*-qxl.conf"
+  if test ! -e "$QxlID"; then
+    QxlID="/usr/share/X11/xorg.conf.d/20-qxl.conf"
+  fi
 
-  cat > /usr/share/X11/xorg.conf.d/20-qxl.conf << QXLCONF
+  cat >> $QxlID << QXLCONF
 Section "Device"
 	Identifier  "Card0"
 	Driver      "qxl"
@@ -2068,6 +2087,9 @@ report_exit 0
 #    https://help.ubuntu.com/community/How%20to%20Create%20a%20Network%20Share%20Via%20Samba%20Via%20CLI\
 #      %20%28Command-line%20interface/Linux%20Terminal%29%20-%20Uncomplicated%2C%20Simple%20and%20Brief%20Way%21
 #    https://www.samba.org/samba/docs/using_samba/ch06.html
+#  * The X server in Debian 8 is extremely slow with QXL client driver and 
+#    there were hugh mount of "Out of surfaces" in Xorg.0.log. It's a known issue.
+#    https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=801081
 #
 # FIXME:
 #  * Debian should check key before download the repo key.
