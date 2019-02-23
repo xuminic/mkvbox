@@ -2,27 +2,29 @@
 
 Setup_Profile_bash()
 {
-  grep bc_cmdline ~/.bashrc > /dev/null
+  grep bc_cmdline $HOME/.bashrc > /dev/null
   if test "x$?" = "x0"; then
-    echo $HOME/.bashrc is already up-to-date.
+    echo "$HOME/.bashrc is already up-to-date."
   else
+    echo "Generating $HOME/.bashrc"
     grep bc_cmdline /etc/skel/.bashrc > /dev/null
     if test "x$?" = "x0"; then
-      cp -f /etc/skel/.bashrc ~
+      cp -f /etc/skel/.bashrc $HOME
     else
-      ./mkvbox -i bash ~/.bashrc
+      ./mkvbox -i bash $HOME/.bashrc
     fi
   fi
 
-  grep noundofile ~/.vimrc > /dev/null
+  grep noundofile $HOME/.vimrc > /dev/null
   if test "x$?" = "x0"; then
-    echo $HOME/.vimrc is already up-to-date.
+    echo "$HOME/.vimrc is already up-to-date."
   else
+    echo "Generating $HOME/.vimrc"
     grep noundofile /etc/skel/.vimrc > /dev/null
     if test "x$?" = "x0"; then
-      cp -f /etc/skel/.vimrc ~
+      cp -f /etc/skel/.vimrc $HOME
     else
-      ./mkvbox -i vim  ~/.vimrc
+      ./mkvbox -i vim  $HOME/.vimrc
     fi
   fi
 }
@@ -36,6 +38,7 @@ Setup_Profile_pluma()
     if test "x$?" = "x0"; then
       echo "PLUMA: GB18030 found in schema"
     elif test -e /usr/bin/ibus || test -e /usr/bin/fcitx; then
+      echo "PLUMA: adding GB18030 in schema"
       gsettings set org.mate.pluma auto-detected-encodings \
          "['GB18030','GB2312','GBK','BIG5','UTF-8','CURRENT','ISO-8859-15']"
       gsettings set org.mate.pluma shown-in-menu-encodings "['GB18030', 'ISO-8859-15']"
@@ -48,13 +51,13 @@ Setup_Profile_ibus()
   # gtk3 theme might cause IME background issue.
   # https://github.com/ibus/ibus/issues/1871
   if test -e /usr/bin/ibus; then
-    if test -d ~/.config/gtk-3.0; then
+    if test -d $HOME/.config/gtk-3.0; then
       echo "IBUS: fine tune the background color"
-      grep "gtk-secondary-caret-color" ~/.config/gtk-3.0/gtk.css > /dev/null
+      grep "gtk-secondary-caret-color" $HOME/.config/gtk-3.0/gtk.css > /dev/null
       if test "x$?" = "x0"; then
-        echo "IBUS: Found gtk-secondary-caret-color in ~/.config/gtk-3.0/gtk.css"
+        echo "IBUS: Found gtk-secondary-caret-color in $HOME/.config/gtk-3.0/gtk.css"
       else
-        echo '* { -gtk-secondary-caret-color: #dbdee6; }' >> ~/.config/gtk-3.0/gtk.css
+        echo '* { -gtk-secondary-caret-color: #dbdee6; }' >> $HOME/.config/gtk-3.0/gtk.css
         echo "IBUS: Please reload IBUS"
       fi
     fi
@@ -69,7 +72,7 @@ Setup_Profile_pidgin()
       mkdir $HOME/.config/autostart
     fi
     if test ! -e $HOME/.config/autostart/pidgin.desktop; then
-      echo PIDGIN: enable auto-start
+      echo "PIDGIN: enable auto-start"
       cp /usr/share/applications/pidgin.desktop $HOME/.config/autostart
     fi
   fi
@@ -83,7 +86,7 @@ Setup_Profile_dropbox()
       mkdir $HOME/.config/autostart
     fi
     if test ! -e $HOME/.config/autostart/dropbox.desktop; then
-      echo DROPBOX: enable auto-start
+      echo "DROPBOX: enable auto-start"
       cp /usr/share/applications/dropbox.desktop $HOME/.config/autostart
     fi
   fi
@@ -99,11 +102,12 @@ Setup_Profile_git()
 {
   # Initial my git references
   if test -x /usr/bin/git; then
-    echo GIT: Initial my references
+    echo "GIT: Initial my references"
     git config -l | grep xuming > /dev/null
     if test "x$?" = "x0"; then
-      echo GIT: references been set
+      echo "GIT: references been set"
     else
+      echo "GIT: setup references"
       git config --global user.name "Andy Xuming"
       git config --global user.email "xuming@users.sf.net"
       git config --global core.editor vim
@@ -121,6 +125,21 @@ Setup_Profile_git()
       #git clone ssh://xuming@git.code.sf.net/p/rename/code rename
       #git clone ssh://xuming@git.code.sf.net/p/snippetax/code snippetax
     fi
+  fi
+}
+
+Setup_Profile_golang()
+{
+  grep "GOROOT" $HOME/.bashrc > /dev/null
+  if test "x$?" = "x0"; then
+    echo "GOROOT has been set already in $HOME/.bashrc"
+  else
+    echo "Updating Go environment in $HOME/.bashrc"
+    echo -e "\\n# Environment for Go Programming Language" >> $HOME/.bashrc
+    echo "export GOROOT=/opt/go" >> $HOME/.bashrc
+    echo "export GOPATH=\$HOME/gocodes" >> $HOME/.bashrc
+    echo "export PATH=\$GOROOT/bin:\$PATH:\$GOPATH/bin" >> $HOME/.bashrc
+    echo "" >> $HOME/.bashrc
   fi
 }
 
