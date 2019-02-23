@@ -511,6 +511,11 @@ Install_Batch_samba()
 	passdb backend = tdbsam
 	# server min protocol = SMB2
 	protocol = SMB3
+	# The following configure is for Windows XP
+	#server max protocol = NT1
+	#lanman auth = yes
+	#ntlm auth = yes
+
 
 # Anonymous Samba sharing
 	security = user

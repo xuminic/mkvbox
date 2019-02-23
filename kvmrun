@@ -19,6 +19,9 @@
 # * DO NOT load snapshots automatically, which may make serious damage to your work.
 #   The snapshots also save the contents of the filesystem. When loading an old
 #   snapshot, the recent changes in your filesystem will be totally wiped out.
+# * Debian 8 seems not pretty well to handle Intel(R) Core(TM) i7-7500U as the host.
+#   It caused loads of "NMI received for unknown reason 21/31 on CPU 0" events at
+#   every terminals. Using "-cpu kvm64" can workaround.
 #
 
 # debug only
@@ -687,15 +690,18 @@ fi
 #VMHDD="$VMHDD -drive if=none,id=idex0,file=\"reactos_hda.qcow2\",format=qcow2 \
 #		-device virtio-blk-pci,scsi=off,drive=idex0"
 
-
-VMRTIME="-name $1 -m $CFG_RAM -cpu host"
-
+# Debian 8 seems not well to handle Intel(R) Core(TM) i7-7500U as the host
+#VMRTIME="-name $1 -m $CFG_RAM -cpu host"
+VMRTIME="-name $1 -m $CFG_RAM"
 case "$CFG_CPU" in
-  1) ;;
-  2) VMRTIME="$VMRTIME -smp 2,sockets=1,cores=1,threads=2" ;;
-  4) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=1" ;;
-  8) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=2" ;;
-  *) VMRTIME="$VMRTIME -smp $CFG_CPU" ;;
+  *k) VMRTIME="$VMRTIME -cpu kvm32" ;;
+  *K) VMRTIME="$VMRTIME -cpu kvm64" ;;
+  *)  VMRTIME="$VMRTIME -cpu host" ;;
+esac
+case "$CFG_CPU" in
+  2*) VMRTIME="$VMRTIME -smp 2,sockets=1,cores=1,threads=2" ;;
+  4*) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=1" ;;
+  8*) VMRTIME="$VMRTIME -smp 4,sockets=2,cores=2,threads=2" ;;
 esac
 
 
