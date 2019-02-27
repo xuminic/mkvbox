@@ -1036,7 +1036,7 @@ Install_Batch_xorg()
       Installer xinit
       # Debain 8 need to disable the surface for qxl driver
       if test $(cat /etc/debian_version | cut -d. -f1) = "8"; then
-        if test ! -e "/usr/share/X11/xorg.conf.d/50-qxl.conf"
+        if test ! -e "/usr/share/X11/xorg.conf.d/50-qxl.conf"; then
           LogAs "Added workaround of QXL driver for Debian 8"
 	  cat > /usr/share/X11/xorg.conf.d/50-qxl.conf << QXLWRD
 Section "Device"
