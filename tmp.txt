@@ -1,0 +1,220 @@
+
+- Creating a hard disk image
+qemu-img create -f raw vdisk.img 10G
+
+- Installing the operating system
+qemu-system-x86_64 -cdrom iso_image -boot order=d -drive file=disk_image,format=raw
+
+
+
+- Using -monitor stdio will send the monitor to the standard output, this is most useful when using qemu on the command line.
+qemu-system-x86_64 -monitor stdio
+
+- Enable IOMMU (Intel VT-d/AMD-Vi) support
+1. enabling IOMMU via kernel parameters
+  vi /etc/default/grub
+change
+  GRUB_CMDLINE_LINUX="crashkernel=auto rhgb quiet"
+to
+  GRUB_CMDLINE_LINUX="crashkernel=auto intel_iommu=on iommu=pt rhgb quiet"
+
+2. grub2-mkconfig -o /boot/grub2/grub.cfg
+
+3. reboot and dmesg | grep -e DMAR -e IOMMU
+
+4. Ensuring that the groups are valid
+#!/bin/bash
+shopt -s nullglob
+for d in /sys/kernel/iommu_groups/*/devices/*; do 
+    n=${d#*/iommu_groups/*}; n=${n%%/*}
+    printf 'IOMMU Group %s ' "$n"
+    lspci -nns "${d##*/}"
+done;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- mount raw harddisk as loop device
+1. fdisk -l vdisk.img
+
+Disk vdisk.img: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x000b4adf
+
+    Device Boot      Start         End      Blocks   Id  System
+vdisk.img1   *        2048     2099199     1048576   83  Linux
+vdisk.img2         2099200    20971519     9436160   8e  Linux LVM
+
+2. calculate the partition offset:
+vdisk.img1 = 2048 * 512 = 1048576
+vdisk.img2 = 2099200 * 512 = 1074790400
+
+3. mount the partition:
+mount -o loop,offset=1048576 vdisk.img /mnt
+
+With loop module autodetecting partitions
+
+The Linux loop driver actually supports partitions in loopback devices, but it is disabled by default. To enable it, do the following:
+
+    Get rid of all your loopback devices (unmount all mounted images, etc.).
+    Unload the loop kernel module, and load it with the max_part=15 parameter set. Additionally, the maximum number of loop devices can be controlled with the max_loop parameter.
+
+Tip: You can put an entry in /etc/modprobe.d to load the loop module with max_part=15 every time, or you can put loop.max_part=15 on the kernel command-line, depending on whether you have the loop.ko module built into your kernel or not.
+
+Set up your image as a loopback device:
+
+# losetup -f -P disk_image
+
+Then, if the device created was /dev/loop0, additional devices /dev/loop0pX will have been automatically created, where X is the number of the partition. These partition loopback devices can be mounted directly. For example:
+
+# mount /dev/loop0p1 mountpoint
+
+
+
+
+
+#!/bin/bash
+
+## DEVICE PASSTHROUGH
+
+configfile=/etc/vfio-pci.cfg
+vmname="windows10vm"
+
+vfiobind() {
+   dev="$1"
+        vendor=$(cat /sys/bus/pci/devices/$dev/vendor)
+        device=$(cat /sys/bus/pci/devices/$dev/device)
+        if [ -e /sys/bus/pci/devices/$dev/driver ]; then
+                echo $dev > /sys/bus/pci/devices/$dev/driver/unbind
+        fi
+        echo $vendor $device > /sys/bus/pci/drivers/vfio-pci/new_id
+   
+}
+
+
+if ps -A | grep -q $vmname; then
+   echo "$vmname is already running." &
+   exit 1
+
+else
+
+   cat $configfile | while read line;do
+   echo $line | grep ^# >/dev/null 2>&1 && continue
+      vfiobind $line
+   done
+
+cp /usr/share/edk2.git/ovmf-x64/OVMF_VARS-pure-efi.fd /tmp/my_vars.fd
+
+## VM INITIALISATION
+
+qemu-system-x86_64 \
+  -name $vmname,process=$vmname \
+  -machine type=q35,accel=kvm \
+  -cpu host,kvm=off \
+  -smp 4,sockets=1,cores=2,threads=2 \
+  -enable-kvm \
+  -m 4G \
+  -mem-path /run/hugepages/kvm \
+  -mem-prealloc \
+  -balloon none \
+  -rtc clock=host,base=localtime \
+  -vga qxk \
+  -serial none \
+  -parallel none \
+  -soundhw hda \
+  -device vfio-pci,host=01:00.0,multifunction=on \
+  -device vfio-pci,host=01:00.1 \
+  -drive if=pflash,format=raw,readonly,file=/usr/share/edk2.git/ovmf-x64/OVMF_CODE-pure-efi.fd \
+  -drive if=pflash,format=raw,file=/tmp/my_vars.fd \
+  -boot order=dc \
+  -device virtio-scsi-pci,id=scsi \
+  -drive id=disk0,if=virtio,cache=none,format=raw,file=<storage>.img \
+  -drive file=<windows>.iso,id=isocd,format=raw,if=none -device scsi-cd,drive=isocd \
+  -drive file=<virtio-win>.iso,id=virtiocd,format=raw,if=none -device ide-cd,bus=ide.1,drive=virtiocd \
+  -netdev type=tap,id=net0,ifname=tap0,vhost=on \
+  -device virtio-net-pci,netdev=net0,mac=00:16:3e:00:01:01
+
+   exit 0
+fi
+
+# with seabios
+
+qemu-system-x86_64 \
+-enable-kvm \
+-M q35 \
+-m 8192 \
+-cpu host \
+-smp 4,sockets=1,cores=4,threads=1 \
+-bios /usr/share/seabios/bios.bin
+-vga qxk \
+-device ioh3420,bus=pcie.0,addr=1c.0,multifunction=on,port=1,chassis=1,id=root.1 \
+-device vfio-pci,host=02:00.0,bus=root.1,addr=00.0,multifunction=on,x-vga=on \
+-device vfio-pci,host=02:00.1,bus=root.1,addr=00.1 \
+-device virtio-scsi-pci \
+-drive file=<storage>.img,id=disk,format=raw,if=none -device scsi-hd,drive=disk \
+-drive file=<windows>.iso,id=isocd,format=raw,if=none -device ide-cd,bus=ide.0,drive=isocd \
+-drive file=<virtio-win>.iso,id=isocd1,format=raw,if=none -device ide-cd,bus=ide.1,drive=isocd1 \
+-boot menu=on
+
+
+#simple
+qemu-system-x86_64 -hda /vm/vdisk.img -m 1024 -enable-kvm -netdev user,id=user.0 -device e1000,netdev=user.0 -soundhw ac97 -no-acpi -daemonize -usb -usbdevice tablet
+
+
+
+
+/usr/bin/qemu-system-x86_64 -name guest=arch-qa,debug-threads=on -S 
+-object secret,id=masterKey0,format=raw,file=/var/lib/libvirt/qemu/domain-11-arch-qa/master-key.aes 
+-machine pc-i440fx-2.11,accel=kvm,usb=off,vmport=off,dump-guest-core=off -cpu Westmere -m 2048 
+-realtime mlock=off -smp 2,sockets=2,cores=1,threads=1 
+-uuid f58c7d93-e78f-4a2d-9a2f-82f82f6db3b6 -no-user-config -nodefaults 
+-chardev socket,id=charmonitor,path=/var/lib/libvirt/qemu/domain-11-arch-qa/monitor.sock,server,nowait 
+-mon chardev=charmonitor,id=monitor,mode=control -rtc base=utc,driftfix=slew 
+-global kvm-pit.lost_tick_policy=delay -no-hpet -no-shutdown -global PIIX4_PM.disable_s3=1 
+-global PIIX4_PM.disable_s4=1 -boot strict=on 
+-device ich9-usb-ehci1,id=usb,bus=pci.0,addr=0x5.0x7 
+-device ich9-usb-uhci1,masterbus=usb.0,firstport=0,bus=pci.0,multifunction=on,addr=0x5 
+-device ich9-usb-uhci2,masterbus=usb.0,firstport=2,bus=pci.0,addr=0x5.0x1 
+-device ich9-usb-uhci3,masterbus=usb.0,firstport=4,bus=pci.0,addr=0x5.0x2 
+-device virtio-serial-pci,id=virtio-serial0,bus=pci.0,addr=0x6 
+-drive file=/home/algebro/vms/images/arch-qa.qcow2,format=qcow2,if=none,id=drive-virtio-disk0 
+-device virtio-blk-pci,scsi=off,bus=pci.0,addr=0x7,drive=drive-virtio-disk0,id=virtio-disk0,bootindex=1 
+-drive if=none,id=drive-ide0-0-0,readonly=on 
+-device ide-cd,bus=ide.0,unit=0,drive=drive-ide0-0-0,id=ide0-0-0 
+-netdev tap,fd=25,id=hostnet0,vhost=on,vhostfd=27 -device virtio-net-pci,netdev=hostnet0,id=net0,mac=52:54:00:ff:e9:47,bus=pci.0,addr=0x3 
+-chardev pty,id=charserial0 
+-device isa-serial,chardev=charserial0,id=serial0 
+-chardev socket,id=charchannel0,path=/var/lib/libvirt/qemu/channel/target/domain-11-arch-qa/org.qemu.guest_agent.0,server,nowait 
+-device virtserialport,bus=virtio-serial0.0,nr=1,chardev=charchannel0,id=channel0,name=org.qemu.guest_agent.0 -chardev spicevmc,id=charchannel1,name=vdagent 
+-device virtserialport,bus=virtio-serial0.0,nr=2,chardev=charchannel1,id=channel1,name=com.redhat.spice.0 
+-device usb-tablet,id=input0,bus=usb.0,port=1 
+-spice port=5900,addr=127.0.0.1,disable-ticketing,image-compression=off,seamless-migration=on 
+-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,max_outputs=1,bus=pci.0,addr=0x2 
+-device intel-hda,id=sound0,bus=pci.0,addr=0x4 
+-device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 -chardev spicevmc,id=charredir0,name=usbredir 
+-device usb-redir,chardev=charredir0,id=redir0,bus=usb.0,port=2 
+-chardev spicevmc,id=charredir1,name=usbredir 
+-device usb-redir,chardev=charredir1,id=redir1,bus=usb.0,port=3 
+-device virtio-balloon-pci,id=balloon0,bus=pci.0,addr=0x8 
+-object rng-random,id=objrng0,filename=/dev/urandom 
+-device virtio-rng-pci,rng=objrng0,id=rng0,bus=pci.0,addr=0x9 -msg timestamp=on
+
+
+/usr/sbin/qemu-system-x86_64 -name Manjaro -S -machine pc-i440fx-2.3,accel=kvm,usb=off,vmport=off -m 1024 -realtime mlock=off -smp 2,sockets=2,cores=1,threads=1 -uuid 6d0a39ac-9425-415a-84b0-391c0ddb1478 -no-user-config -nodefaults -chardev socket,id=charmonitor,path=/var/lib/libvirt/qemu/Manjaro.monitor,server,nowait -mon chardev=charmonitor,id=monitor,mode=control -rtc base=utc,driftfix=slew -global kvm-pit.lost_tick_policy=discard -no-hpet -no-shutdown -global PIIX4_PM.disable_s3=1 -global PIIX4_PM.disable_s4=1 -boot strict=on -device ich9-usb-ehci1,id=usb,bus=pci.0,addr=0x6.0x7 -device ich9-usb-uhci1,masterbus=usb.0,firstport=0,bus=pci.0,multifunction=on,addr=0x6 -device ich9-usb-uhci2,masterbus=usb.0,firstport=2,bus=pci.0,addr=0x6.0x1 -device ich9-usb-uhci3,masterbus=usb.0,firstport=4,bus=pci.0,addr=0x6.0x2 -device virtio-serial-pci,id=virtio-serial0,bus=pci.0,addr=0x5 -drive file=/home/core/virt/images/manjaro.qcow2,if=none,id=drive-virtio-disk0,format=qcow2 -device virtio-blk-pci,scsi=off,bus=pci.0,addr=0x7,drive=drive-virtio-disk0,id=virtio-disk0,bootindex=1 -drive if=none,id=drive-ide0-0-0,readonly=on,format=raw -device ide-cd,bus=ide.0,unit=0,drive=drive-ide0-0-0,id=ide0-0-0 -netdev tap,fd=21,id=hostnet0,vhost=on,vhostfd=24 -device virtio-net-pci,netdev=hostnet0,id=net0,mac=52:54:00:85:70:9d,bus=pci.0,addr=0x3 -chardev pty,id=charserial0 -device isa-serial,chardev=charserial0,id=serial0 -chardev socket,id=charchannel0,path=/var/lib/libvirt/qemu/channel/target/gnome-continuous-3.14.org.qemu.guest_agent.0,server,nowait -device virtserialport,bus=virtio-serial0.0,nr=1,chardev=charchannel0,id=channel0,name=org.qemu.guest_agent.0 -chardev spicevmc,id=charchannel1,name=vdagent -device virtserialport,bus=virtio-serial0.0,nr=3,chardev=charchannel1,id=channel1,name=com.redhat.spice.0 -device usb-tablet,id=input0 -spice port=5902,addr=0.0.0.0,disable-ticketing,seamless-migration=on -device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vgamem_mb=16,bus=pci.0,addr=0x2 -device intel-hda,id=sound0,bus=pci.0,addr=0x4 -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 -chardev spicevmc,id=charredir0,name=usbredir -device usb-redir,chardev=charredir0,id=redir0 -chardev spicevmc,id=charredir1,name=usbredir -device usb-redir,chardev=charredir1,id=redir1 -device virtio-balloon-pci,id=balloon0,bus=pci.0,addr=0x8 -msg timestamp=on
+
