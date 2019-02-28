@@ -2,26 +2,22 @@
 
 Setup_Profile_bash()
 {
-  grep bc_cmdline $HOME/.bashrc > /dev/null
-  if test "x$?" = "x0"; then
+  if $(grep "bcc EXPRESSIONS" $HOME/.bashrc > /dev/null); then
     echo "$HOME/.bashrc is already up-to-date."
   else
     echo "Generating $HOME/.bashrc"
-    grep bc_cmdline /etc/skel/.bashrc > /dev/null
-    if test "x$?" = "x0"; then
+    if $(grep "bcc EXPRESSIONS" /etc/skel/.bashrc > /dev/null); then
       cp -f /etc/skel/.bashrc $HOME
     else
       ./mkvbox -i bash $HOME/.bashrc
     fi
   fi
 
-  grep noundofile $HOME/.vimrc > /dev/null
-  if test "x$?" = "x0"; then
+  if $(grep noundofile $HOME/.vimrc > /dev/null); then
     echo "$HOME/.vimrc is already up-to-date."
   else
     echo "Generating $HOME/.vimrc"
-    grep noundofile /etc/skel/.vimrc > /dev/null
-    if test "x$?" = "x0"; then
+    if $(grep noundofile /etc/skel/.vimrc > /dev/null); then
       cp -f /etc/skel/.vimrc $HOME
     else
       ./mkvbox -i vim  $HOME/.vimrc
@@ -53,8 +49,7 @@ Setup_Profile_ibus()
   if test -e /usr/bin/ibus; then
     if test -d $HOME/.config/gtk-3.0; then
       echo "IBUS: fine tune the background color"
-      grep "gtk-secondary-caret-color" $HOME/.config/gtk-3.0/gtk.css > /dev/null
-      if test "x$?" = "x0"; then
+      if $(grep "gtk-secondary-caret-color" $HOME/.config/gtk-3.0/gtk.css > /dev/null); then
         echo "IBUS: Found gtk-secondary-caret-color in $HOME/.config/gtk-3.0/gtk.css"
       else
         echo '* { -gtk-secondary-caret-color: #dbdee6; }' >> $HOME/.config/gtk-3.0/gtk.css
@@ -103,8 +98,7 @@ Setup_Profile_git()
   # Initial my git references
   if test -x /usr/bin/git; then
     echo "GIT: Initial my references"
-    git config -l | grep xuming > /dev/null
-    if test "x$?" = "x0"; then
+    if $(git config -l | grep xuming > /dev/null); then
       echo "GIT: references been set"
     else
       echo "GIT: setup references"
@@ -130,8 +124,7 @@ Setup_Profile_git()
 
 Setup_Profile_golang()
 {
-  grep "GOROOT" $HOME/.bashrc > /dev/null
-  if test "x$?" = "x0"; then
+  if $(grep "GOROOT" $HOME/.bashrc > /dev/null); then
     echo "GOROOT has been set already in $HOME/.bashrc"
   else
     echo "Updating Go environment in $HOME/.bashrc"
