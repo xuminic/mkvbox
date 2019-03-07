@@ -113,6 +113,7 @@ Setup_Profile_git()
       git config --global core.editor vim
       git config --global merge.tool vimdiff
       git config --global credential.helper cache
+      git config --global push.default simple
 
       #git remote set-url origin https://github.com/xuminic/ezthumb.git
       #git remote add sf ssh://xuming@git.code.sf.net/p/ezthumb/code
