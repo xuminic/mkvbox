@@ -648,8 +648,7 @@ Install_Batch_bash()
  
   LogAs "\\nINSTALLING the $FOUT file."
 
-  grep bc_cmdline $FOUT > /dev/null
-  if test "x$?" = "x0"; then
+  if $(grep "bcc EXPRESSIONS" $FOUT > /dev/null); then
     return
   fi
 
@@ -660,10 +659,13 @@ Install_Batch_bash()
 ulimit -c unlimited
 
 PS1='\u:\w\\$ '
-PATH="\$PATH:\$HOME/bin:." 
+
+if ! \$(echo \$PATH | grep '/home/' > /dev/null); then
+  PATH="\$PATH:\$HOME/bin:." 
+fi
 
 # replace expr with the bc command line express
-bc_cmdline()
+bcc()
 {
   if test "x\$@" = "x"; then
     echo A quick call to GNU bc, i.e., bcc EXPRESSIONS
@@ -672,7 +674,13 @@ bc_cmdline()
   fi
 }
 
-alias bcc='bc_cmdline'
+path()
+{
+  for i in \$(echo \$PATH | tr ':' '\\n'); do 
+    echo "  \$i"
+  done
+}
+
 alias egrep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias grep='grep --color=auto'
@@ -681,7 +689,6 @@ alias ls='ls --color=auto'
 alias ll='ls -lh --color=auto'
 alias cp='cp -i'
 alias mv='mv -i'
-alias path='echo \$PATH'
 BASHRC
 
   case $CFG_SYS in
