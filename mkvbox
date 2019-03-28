@@ -2139,6 +2139,9 @@ report_exit 0
 # FIXME:
 #  * Debian should check key before download the repo key.
 #  * Archlinux keeps freezing in desktop panel applets
+#  * Debian 8 moved to archive.debian.org
+#    https://www.howtoforge.com/using-old-debian-versions-in-your-sources.list
+#    deb http://archive.debian.org/debian/ <version> main non-free contrib
 #
 # History:
 #
