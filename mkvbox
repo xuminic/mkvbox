@@ -60,7 +60,7 @@ CFG_GROUP_PIC="geeqie gthumb imagemagick gimp inkscape"
 #CFG_GUI="$CFG_GUI cad"
 CFG_GROUP_CAD="librecad freecad openscad blender"
 ####audio player
-#CFG_GUI="$CFG_GUI pulsa"
+#CFG_GUI="$CFG_GUI pulsa mp3"
 #### video player
 #CFG_GUI="$CFG_GUI vlc"
 #### GStreamer codec collection
@@ -326,16 +326,17 @@ Install_Batch_repo()
 
 Install_Batch_cli()
 {
-  local VOLUMN="net-tools wget pciutils usbutils cifs-utils arj git p7zip zip unzip cpio bc expect"
+  local VOLUMN="net-tools wget pciutils usbutils cifs-utils arj git p7zip zip unzip \
+	  cpio bc expect ccd2iso mdf2iso"
 
   LogAs "\\nINSTALLING generic CLI tools"
 
   #### ifconfig/lspci/samba/... always needed
   case $CFG_SYS in
     CENTOS) VOLUMN="$VOLUMN hexedit attr unrar" ;;
-    DEBIAN) VOLUMN="$VOLUMN aptitude rar" ;;
-    UBUNTU) VOLUMN="$VOLUMN openssh-client rar" ;;
-    ARCHLINUX) VOLUMN="$VOLUMN openssh unrar" ;;
+    DEBIAN) VOLUMN="$VOLUMN aptitude openssh-client openssh-server rar steghide stegsnow" ;;
+    UBUNTU) VOLUMN="$VOLUMN openssh-client openssh-server rar steghide stegsnow" ;;
+    ARCHLINUX) VOLUMN="$VOLUMN openssh unrar steghide" ;;
   esac
   Installer $VOLUMN
 }
@@ -1121,6 +1122,16 @@ Install_Batch_pulsa()
     *) VOLUMN="$VOLUMN pulseaudio-utils pavucontrol" ;;
   esac
   Installer $VOLUMN
+}
+
+Install_Batch_mp3()
+{
+  LogAs "\\nINSTALLING MP3 related Music Players"
+
+  case $CFG_SYS in
+    CENTOS) Installer lame audacious ;;
+    *) Installer lame audacious bs1770gain;;
+  esac
 }
 
 Install_Batch_firefox()
