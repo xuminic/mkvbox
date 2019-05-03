@@ -95,6 +95,13 @@ LogExec()
   fi
 }
 
+LogRunAs()
+{
+  echo $@ | tee -a $CFG_LOG
+  eval $@ 2>&1 | tee -a $CFG_LOG
+}
+
+
 System()
 {
   if test -e /etc/centos-release; then
@@ -1211,6 +1218,65 @@ FIREFOX
   fi
 }
 
+Install_Batch_torbrowser()
+{
+  LogAs "\\nINSTALLING Tor Browser"
+
+  file $(which bash) | grep "ELF 64-bit" > /dev/null
+  if test "x$?" = "x0"; then
+    local URL="https://www.torproject.org/dist/torbrowser/8.0.8/tor-browser-linux64-8.0.8_en-US.tar.xz"
+  else
+    local URL="https://www.torproject.org/dist/torbrowser/8.0.8/tor-browser-linux32-8.0.8_en-US.tar.xz"
+  fi
+  LogRunAs wget --progress=dot:giga $URL
+
+  local URL=$(ls tor-browser-linux*)
+  if test ! -e "$URL"; then
+    LogAs "ERROR: torBrowser not downloaded!"
+    exit
+  fi
+
+  if test ! -d $CHROOT/opt/tor-browser_en-US; then
+    LogRunAs tar Jxf $URL -C $CHROOT/opt
+  else
+    LogAs "Removing the previous torBrowser"
+    LogRunAs mv $CHROOT/opt/tor-browser_en-US/Browser/TorBrowser/Data/Tor/torrc $CHROOT/tmp
+    LogRunAs rm -rf $CHROOT/opt/tor-browser_en-US
+    LogRunAs tar Jxf $URL -C $CHROOT/opt
+    LogRunAs mv $CHROOT/tmp/torrc $CHROOT/opt/tor-browser_en-US/Browser/TorBrowser/Data/Tor
+  fi
+
+  cat > ./grant_access.sh << TORUTIL
+#!/bin/bash
+case "\$(stat -c %a \$1)" in
+  700) chmod 755 \$1 ;;
+  600) chmod 644 \$1 ;;
+  300) chmod 311 \$1 ;;
+esac
+TORUTIL
+  chmod 755 ./grant_access.sh 
+  LogRunAs find $CHROOT/opt/tor-browser_en-US -exec ./grant_access.sh {} '\;'
+  rm ./grant_access.sh
+
+  LogExec rm -f $URL
+
+  if test ! -e $CHROOT/usr/share/applications/tor-browser.desktop; then
+    cat > $CHROOT/usr/share/applications/tor-browser.desktop << TORBROWSER
+[Desktop Entry]
+Name=Tor Browser
+Exec=/opt/tor-browser_en-US/Browser/start-tor-browser --detach 
+Icon=web-browser
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;text/mml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+StartupWMClass=Firefox
+Categories=Network;WebBrowser;
+TORBROWSER
+  fi
+}
+
 Install_Batch_chromium()
 {
   LogAs "\\nINSTALLING Open Source Chromium"
@@ -1992,6 +2058,8 @@ CFG_INSTALL="$CFG_INSTALL "
 if test ! -d "$CHROOT/etc/skel"; then
   mkdir -p $CHROOT/etc/skel
   mkdir -p $CHROOT/usr/bin
+  mkdir -p $CHROOT/tmp $CHROOT/opt
+  mkdir -p $CHROOT/usr/share/applications
 fi
 
 while [ "$#" -gt 0 ]; do
