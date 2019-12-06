@@ -260,10 +260,10 @@ Repo_Update_CentOS8()
   LogAs "\\nINSTALLING extra and unofficial Repos"
 
   #install extra repos
-  LogExec dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  LogExec dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
   #install RPM Fusion
-  LogExec dnf install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
+  LogExec dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
 
   #update and upgrade to the newest releases
   LogExec dnf -y update
@@ -974,6 +974,9 @@ Install_Desktop_Cinnamon()
 Install_Desktop_Gnome()
 {
   case $CFG_SYS in
+    CENTOS8)
+      Installer -g "GNOME Desktop"
+      ;;
     CENTOS*)
       Installer -g "Server with GUI"
       ;;
@@ -1060,6 +1063,9 @@ Install_Batch_xorg()
   LogAs "\\nINSTALLING X.org server"
 
   case $CFG_SYS in
+    CENTOS8)
+      # Do nothing. CentOS8 using desktop group installation only
+      ;;
     CENTOS*) 
       Installer -g "X Window system" 
       # set runlevel to gui
