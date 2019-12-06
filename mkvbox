@@ -288,8 +288,8 @@ Repo_Update_Debian()
   grep "deb-multimedia.org" /etc/apt/sources.list > /dev/null
   if test "x$?" != "x0"; then
     echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
-    #echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
-    echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> $CHROOT/etc/apt/sources.list
+    echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
+    #echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> $CHROOT/etc/apt/sources.list
     LogExec apt-get update
     LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
     if ! test "x$?" = "x0"; then
@@ -790,6 +790,7 @@ Install_Batch_skel()
 
   # only root can install the profiles to all users
   LogAs "\\nINSTALLING profiles from /etc/skel to all users"
+  Installer sudo
   for i in $(Users); do
     LogExec sudo -u $i cp -f $PROFILE /home/$i
   done
@@ -2036,7 +2037,7 @@ usage_exit()
 {
   cat << my_usage
 $0 [OPTION]
-OPTION:
+$CFG_SYS OPTION:
   -d, --desktop     choose desktop [mate/xfce/lxde/cinnamon/gnome/kde]
   -v, --vm          choose Virtual Machine type [none/vbguest/kvmguest]
       --ime         choose IME method [ibus/fcitx]
