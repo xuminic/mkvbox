@@ -28,6 +28,8 @@
 # debug only
 #RUN=echo
 RUN=eval
+#QEMU=qemu-system-x86_64
+QEMU=/usr/libexec/qemu-kvm
 
 #############################################################################
 # Configure
@@ -55,7 +57,7 @@ VMNICMODL="rtl8139"	# ne2k_pci,i82551,i82557b,i82559er,rtl8139,e1000,pcnet
 #VMVIDEO="-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,\
 #          vram64_size_mb=0,vgamem_mb=16,bus=pci.0,addr=0x2"
 VMVIDEO="-vga qxl"
-VMAUDIO="-soundhw hda"
+#VMAUDIO="-soundhw hda"
 
 #VMIOMMU="-enable-kvm -machine q35,accel=kvm"
 VMIOMMU="-enable-kvm -machine pc,accel=kvm"
@@ -97,7 +99,7 @@ System()
 # 20180910: Debian version info: QEMU emulator version 2.0.0(Debian ...)
 Qemu_Version_match()
 {
-  local CURR=$(qemu-system-x86_64 --version 2> /dev/null | grep version | tr ",.)(" " " | cut -f4-6 -d' ')
+  local CURR=$($QEMU --version 2> /dev/null | grep version | tr ",.)(" " " | cut -f4-6 -d' ')
   CURR=$(printf "%d%03d%03d" $CURR)
 
   local WANT="0"		# if target version not specified
@@ -767,12 +769,12 @@ case "$CFG_SCREEN" in
     ;;
 esac
 
-echo qemu-system-x86_64 $VMRTIME | tee -a /tmp/kvmrun.log
+echo $QEMU $VMRTIME | tee -a /tmp/kvmrun.log
 
 # tap/bridge networking require sudo/root priviledge
 if test "$CFG_NETWORK" = "tap"; then
-  $RUN sudo qemu-system-x86_64 $VMRTIME
+  $RUN sudo $QEMU $VMRTIME
 else
-  $RUN qemu-system-x86_64  $VMRTIME
+  $RUN $QEMU $VMRTIME
 fi
 

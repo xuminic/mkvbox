@@ -976,7 +976,7 @@ Install_Desktop_Gnome()
 {
   case $CFG_SYS in
     CENTOS8)
-      Installer -g "GNOME Desktop"
+      Installer -g "GNOME Desktop Environment"
       ;;
     CENTOS*)
       Installer -g "Server with GUI"
