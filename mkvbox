@@ -542,7 +542,7 @@ Install_Batch_samba()
   local DEFUSER=$(Users)
 
   LogAs "\\nINSTALLING the SAMBA service."
-  Installer samba samba-client smbnetfs
+  Installer samba samba-client
 
   grep mkvbox /etc/samba/smb.conf > /dev/null
   if test "x$?" != "x0"; then
@@ -650,6 +650,7 @@ SMBCFG
       LogExec setsebool -P samba_enable_home_dirs on
       ;;
     DEBIAN*|UBUNTU)
+      Installer smbnetfs
       LogExec systemctl enable smbd
       LogExec systemctl restart smbd
       ;;
