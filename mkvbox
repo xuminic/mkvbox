@@ -135,36 +135,34 @@ Installer()
     return
   fi
   LogAs "\\nINSTALLING $@"
-  case $CFG_SYS in
-    CENTOS8)
-      if test "x$Group" = "xgroup"; then
-        LogExec dnf -y groupinstall \"$@\"
-      else
-        LogExec dnf -y install "$@"
-      fi
-      ;;
-    CENTOS*)
-      if test "x$Group" = "xgroup"; then
-        LogExec yum -y groupinstall \"$@\"
-      else
-        LogExec yum -y install "$@"
-      fi
-      ;;
-    DEBIAN*|UBUNTU)
-      if test "x$CHROOT" = x; then
-        apt-get -y install "$@" 2>&1 | tee -a $CFG_LOG
-      else
-        apt-get -s -y install "$@" 2>&1 | tee -a $CFG_LOG
-      fi
-      ;;
-    ARCHLINUX)
-      LogExec pacman -S --noconfirm --needed "$@"
-      ;;
-  esac
-  if ! test "x$?" = "x0"; then
-    LogAs "Install failed!"
-    exit 1
-  fi
+  for i in "$@"; do
+    case $CFG_SYS in
+      CENTOS8)
+        if test "x$Group" = "xgroup"; then
+          LogExec dnf -y groupinstall \"$i\"
+        else
+          LogExec dnf -y install "$i"
+        fi
+        ;;
+      CENTOS*)
+        if test "x$Group" = "xgroup"; then
+          LogExec yum -y groupinstall \"$i\"
+        else
+          LogExec yum -y install "$i"
+        fi
+        ;;
+      DEBIAN*|UBUNTU)
+        if test "x$CHROOT" = x; then
+          apt-get -y install "$i" 2>&1 | tee -a $CFG_LOG
+        else
+          apt-get -s -y install "$i" 2>&1 | tee -a $CFG_LOG
+        fi
+        ;;
+      ARCHLINUX)
+        LogExec pacman -S --noconfirm --needed "$i"
+        ;;
+    esac
+  done
 }
 
 # Used in ArchLinux
@@ -1875,7 +1873,7 @@ TPADOFF
 
 Toggle_Screen()
 {
-  local OUTPUT=$(xrandr | grep "connected primary" | cut -f1 -d" ")
+  local OUTPUT=$(xrandr | grep "connected" | cut -f1 -d" ")
   
   if test "x$OUTPUT" = "x"; then
     OUTPUT="Virtual-0"
@@ -2079,6 +2077,7 @@ CFG_INSTALL="$CFG_INSTALL "
 
 #echo $CFG_INSTALL | fold -s -w $(tput cols)
 #echo $(Users)
+#Installer "$@"
 
 # once for all in dry-run mode
 if test ! -d "$CHROOT/etc/skel"; then
