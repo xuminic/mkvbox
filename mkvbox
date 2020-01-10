@@ -1535,7 +1535,8 @@ Install_Batch_kvmguest()
 {
   LogAs "\\nINSTALLING KVM Guest Configuration"
 
-  Toggle_Screen xinit
+  # Don't fix the screen size unless you have to
+  #Toggle_Screen xinit
   Installer spice-vdagent
   Install_Batch_eth0
 }
@@ -1873,7 +1874,7 @@ TPADOFF
 
 Toggle_Screen()
 {
-  local OUTPUT=$(xrandr | grep "connected" | cut -f1 -d" ")
+  local OUTPUT=$(xrandr | grep -w "connected" | cut -f1 -d" ")
   
   if test "x$OUTPUT" = "x"; then
     OUTPUT="Virtual-0"
@@ -1909,6 +1910,8 @@ EndSection
 
 XMON
       ;;
+
+    auto) xrandr --output "$OUTPUT" --auto ;;
 
     *x*)
       local MODNAME=$(xrandr | grep "^   " | grep -m1 1912x936 | cut -f4 -d' ')
@@ -2042,7 +2045,7 @@ $CFG_SYS OPTION:
       --ime         choose IME method [ibus/fcitx]
   -i, --install     quick installing packages
   -t, --touchpad    change the touchpad control [disable/on/off]
-      --screen      change screen size of client (qxl) [1920x1080/1280x1024/.../xinit]
+      --screen      change screen size of client [1920x1080/1280x1024/.../xinit/auto]
       --packing     pack and transfer the mkvbox to VM host [Public][download_path]
       --clip        simple way to copy and paste
 
