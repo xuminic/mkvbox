@@ -283,25 +283,33 @@ Repo_Update_Debian()
     LogExec rm -f /tmp/sources.list
   fi
 
-  grep "deb-multimedia.org" /etc/apt/sources.list > /dev/null
-  if test "x$?" != "x0"; then
-    echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
-    echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
-    #echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> $CHROOT/etc/apt/sources.list
-    LogExec apt-get update
-    LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
-    if ! test "x$?" = "x0"; then
-      # the backup plan for deb-multimedia keyring
-      if test -e "./bin/$keyring"; then
-        LogExec dpkg -i ./bin/$keyring
-      else
-        LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
-        if test -e "$keyring"; then
-          LogExec dpkg -i $keyring
+  case $CFG_SYS in
+    DEBIAN8|DEBIAN9)
+      grep "deb-multimedia.org" /etc/apt/sources.list > /dev/null
+      if test "x$?" != "x0"; then
+        echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
+        echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
+        #echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> $CHROOT/etc/apt/sources.list
+        LogExec apt-get update
+        LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
+        if ! test "x$?" = "x0"; then
+          # the backup plan for deb-multimedia keyring
+          if test -e "./bin/$keyring"; then
+            LogExec dpkg -i ./bin/$keyring
+          else
+            LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
+            if test -e "$keyring"; then
+              LogExec dpkg -i $keyring
+            fi
+          fi
         fi
-      fi
-    fi
-  fi
+      fi ;;
+
+    DEBIAN10)
+      LogExec apt-get update -oAcquire::AllowInsecureRepositories=true
+      LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
+      ;;
+  esac
 
   #update and upgrade to the newest releases
   LogExec apt-get update 
@@ -362,7 +370,9 @@ Install_Batch_cli()
     UBUNTU) VOLUMN="$VOLUMN openssh-client openssh-server rar steghide stegsnow" ;;
     ARCHLINUX) VOLUMN="$VOLUMN openssh unrar steghide" ;;
   esac
-  Installer $VOLUMN
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 # OPTIONS:
@@ -415,8 +425,15 @@ Install_Batch_devel()
       Installer -g "Development Tools" 
       Installer gcc-go 
       ;;
-    DEBIAN*|UBUNTU) Installer build-essential manpages-dev pkg-config gccgo ;;
-    ARCHLINUX) Installer base-devel gcc-go ;;
+    DEBIAN*|UBUNTU)
+      Installer build-essential
+      Installer manpages-dev
+      Installer pkg-config gccgo
+      ;;
+    ARCHLINUX)
+      Installer base-devel
+      Installer gcc-go
+      ;;
   esac
 
   # Download and install the lastest GO from its official site
@@ -443,9 +460,21 @@ Install_Batch_libffmpeg()
 {
   LogAs "\\nINSTALLING ffmpeg and gd development packages"
   case $CFG_SYS in
-    CENTOS*) Installer ffms2-devel gd-devel ;;
-    DEBIAN*|UBUNTU) Installer libavformat-dev libswscale-dev libgd2-dev libx11-dev zlib1g-dev ;;
-    ARCHLINUX) Installer ffmpeg gd ;;
+    CENTOS*)
+      Installer ffms2-devel
+      Installer gd-devel
+      ;;
+    DEBIAN*|UBUNTU)
+      Installer libavformat-dev
+      Installer libswscale-dev
+      Installer libgd2-dev
+      Installer libx11-dev
+      Installer zlib1g-dev
+      ;;
+    ARCHLINUX)
+      Installer ffmpeg
+      Installer gd
+      ;;
   esac
 }
 
@@ -453,16 +482,31 @@ Install_Batch_freeimage()
 {
   LogAs "\\nINSTALLING freeimage and SDL development packages"
   case $CFG_SYS in
-    CENTOS*) Installer freeimage-devel SDL-devel SDL_gfx-devel ;;
-    DEBIAN*|UBUNTU) Installer libfreeimage-dev libsdl-dev libsdl-gfx1.2-dev ;;
-    ARCHLINUX) Installer sdl2 freeimage lsb_release ;;
+    CENTOS*)
+      Installer freeimage-devel
+      Installer SDL-devel
+      Installer SDL_gfx-devel
+      ;;
+    DEBIAN*|UBUNTU)
+      Installer libfreeimage-dev
+      Installer libsdl-dev
+      Installer libsdl-gfx1.2-dev
+      ;;
+    ARCHLINUX)
+      Installer sdl2
+      Installer freeimage
+      Installer lsb_release
+      ;;
   esac
 }
 
 Install_Batch_devmore()
 {
   LogAs "\\nINSTALLING more development packages"
-  Installer srecord autoconf libtool gdb
+  Installer srecord
+  Installer autoconf
+  Installer libtool
+  Installer gdb
 }
 
 Install_Batch_pymore()
@@ -484,9 +528,9 @@ Install_Batch_pymore()
       VOLUMN="$VOLUMN python-matplotlib python2-matplotlib"
       ;;
   esac
-  if test "x$VOLUMN" != "x"; then
-    Installer $VOLUMN
-  fi
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 
@@ -540,7 +584,8 @@ Install_Batch_samba()
   local DEFUSER=$(Users)
 
   LogAs "\\nINSTALLING the SAMBA service."
-  Installer samba samba-client
+  Installer samba
+  Installer samba-client
 
   grep mkvbox /etc/samba/smb.conf > /dev/null
   if test "x$?" != "x0"; then
@@ -895,7 +940,8 @@ Install_Batch_eth0()
 Install_LightDM_Arch()
 {
     # install and config the lightdm in Archlinux
-    Installer lightdm lightdm-gtk-greeter
+    Installer lightdm
+    Installer lightdm-gtk-greeter
     LogExec mv -f /etc/lightdm/lightdm.conf /tmp/lightdm.conf
     if test "x$CHROOT" = x; then
       sed 's/#greeter-session=example-gtk-gnome/greeter-session=lightdm-gtk-greeter/' \
@@ -918,13 +964,16 @@ Install_Desktop_Mate()
       Installer caja-share
       ;;
     DEBIAN*)
-      Installer mate-desktop-environment-extras lightdm
+      Installer mate-desktop-environment-extras
+      Installer lightdm
       ;;
     UBUNTU)
-      Installer lightdm ubuntu-mate-desktop
+      Installer lightdm
+      Installer ubuntu-mate-desktop
       ;;
     ARCHLINUX)
-      Installer mate mate-extra 
+      Installer mate
+      Installer mate-extra 
       Install_LightDM_Arch
       echo "exec mate-session" > $CHROOT/etc/skel/.xinitrc
   esac
@@ -938,10 +987,14 @@ Install_Desktop_Xfce()
       Installer mousepad
       ;;
     DEBIAN*|UBUNTU)
-      Installer xfce4 xfce4-goodies thunar-archive-plugin lightdm
+      Installer xfce4
+      Installer xfce4-goodies
+      Installer thunar-archive-plugin
+      Installer lightdm
       ;;
     ARCHLINUX)
-      Installer xfce4 xfce4-goodies
+      Installer xfce4
+      Installer xfce4-goodies
       Install_LightDM_Arch
       echo "exec startxfce4" > $CHROOT/etc/skel/.xinitrc
       ;;
@@ -952,16 +1005,19 @@ Install_Desktop_Cinnamon()
 {
   case $CFG_SYS in
     CENTOS*)
-      Installer cinnamon lightdm
+      Installer cinnamon
+      Installer lightdm
       ;;
     DEBIAN*)
-      Installer cinnamon lightdm
+      Installer cinnamon
+      Installer lightdm
       ;;
     UBUNTU)
       LogExec apt-add-repository -y ppa:embrosyn/cinnamon
       LogExec apt-get update
       LogExec apt-get -y upgrade
-      Installer cinnamon lightdm
+      Installer cinnamon
+      Installer lightdm
       ;;
     ARCHLINUX)
       Installer cinnamon
@@ -987,7 +1043,9 @@ Install_Desktop_Gnome()
       Installer gnome-session-flashback
       ;;
     ARCHLINUX)
-      Installer gnome gnome-extra gdm
+      Installer gnome
+      Installer gnome-extra
+      Installer gdm
       #echo "exec gnome-session" > $CHROOT/etc/skel/.xinitrc
       cat > $CHROOT/etc/skel/.xinitrc << GNOMECLS
 export XDG_CURRENT_DESKTOP=GNOME-Classic:GNOME
@@ -1006,10 +1064,14 @@ Install_Desktop_Lxde()
       Installer -g "Xfce"
       ;;
     DEBIAN*|UBUNTU)
-      Installer lxde leafpad xarchiver
+      Installer lxde
+      Installer leafpad
+      Installer xarchiver
       ;;
     ARCHLINUX)
-      Installer lxde leafpad xarchiver
+      Installer lxde
+      Installer leafpad
+      Installer xarchiver
       Install_LightDM_Arch
       echo "exec startlxde" > $CHROOT/etc/skel/.xinitrc
       ;;
@@ -1029,7 +1091,8 @@ Install_Desktop_KDE()
       Installer kubuntu-desktop
       ;;
     ARCHLINUX)
-      Installer plasma-desktop kde-applications 
+      Installer plasma-desktop
+      Installer kde-applications 
       Install_LightDM_Arch
       echo "exec startkde" > $CHROOT/etc/skel/.xinitrc
       ;;
@@ -1052,7 +1115,8 @@ Install_Desktop_Enlightenment()
       Installer enlightenment
       ;;
     ARCHLINUX)
-      Installer enlightenment terminology
+      Installer enlightenment
+      Installer terminology
       echo "exec enlightenment_start" > $CHROOT/etc/skel/.xinitrc
       ;;
   esac
@@ -1086,8 +1150,16 @@ EndSection
 QXLWRD
       fi 
       ;;
-    DEBIAN*|UBUNTU) Installer xinit ;;
-    ARCHLINUX) Installer xorg-server xorg-xinit mesa ttf-dejavu ttf-bitstream-vera ;;
+    DEBIAN*|UBUNTU)
+      Installer xinit
+      ;;
+    ARCHLINUX)
+      Installer xorg-server
+      Installer xorg-xinit
+      Installer mesa
+      Installer ttf-dejavu
+      Installer ttf-bitstream-vera
+      ;;
   esac
 
   for i in $@; do
@@ -1127,13 +1199,14 @@ Install_Batch_xutil()
     esac
   fi
 
-  if test "x$CFG_GROUP_XUTIL" != "x"; then
-    Installer $CFG_GROUP_XUTIL
-  fi
+  for i in $CFG_GROUP_XUTIL; do
+    Installer $i
+  done
 
   if test "x$1" = "-a"; then
     #### old style X fonts
-    Installer xorg-fonts-100dpi xorg-fonts-75dpi
+    Installer xorg-fonts-100dpi
+    Installer xorg-fonts-75dpi
   fi
 
   # required in Archlinux
@@ -1152,7 +1225,9 @@ Install_Batch_pulsa()
     CENTOS*) VOLUMN="$VOLUMN pulseaudio-utils pulseaudio-qpaeq pavucontrol" ;;
     *) VOLUMN="$VOLUMN pulseaudio-utils pavucontrol" ;;
   esac
-  Installer $VOLUMN
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 Install_Batch_mp3()
@@ -1160,8 +1235,15 @@ Install_Batch_mp3()
   LogAs "\\nINSTALLING MP3 related Music Players"
 
   case $CFG_SYS in
-    CENTOS*) Installer lame audacious ;;
-    *) Installer lame audacious bs1770gain;;
+    CENTOS*)
+      Installer lame
+      Installer audacious
+      ;;
+    *) 
+      Installer lame
+      Installer audacious
+      Installer bs1770gain
+      ;;
   esac
 }
 
@@ -1170,10 +1252,24 @@ Install_Batch_firefox()
   LogAs "\\nINSTALLING firefox in Repo"
 
   case $CFG_SYS in
-    CENTOS*) Installer firefox mozilla-ublock-origin mozilla-noscript mozilla-https-everywhere ;;
-    DEBIAN*) Installer firefox-esr firefox-esr-ublock-origin firefox-esr-noscript firefox-esr-flashblock ;;
-    UBUNTU) Installer firefox;;
-    ARCHLINUX) Installer firefox;;
+    CENTOS*)
+      Installer firefox
+      Installer mozilla-ublock-origin
+      Installer mozilla-noscript
+      Installer mozilla-https-everywhere
+      ;;
+    DEBIAN*)
+      Installer firefox-esr
+      Installer firefox-esr-ublock-origin
+      Installer firefox-esr-noscript
+      Installer firefox-esr-flashblock
+      ;;
+    UBUNTU)
+      Installer firefox
+      ;;
+    ARCHLINUX)
+      Installer firefox
+      ;;
   esac
 }
 
@@ -1305,11 +1401,26 @@ Install_Batch_chromium()
 {
   LogAs "\\nINSTALLING Open Source Chromium"
   case $CFG_SYS in
-    CENTOS*) Installer chromium chromedriver chromium-pepper-flash chrome-remote-desktop ;;
-    #DEBIAN*) Installer chromium chromium-shell chromium-driver flashplayer-chromium ;;
-    DEBIAN*) Installer chromium flashplayer-chromium ;;
-    UBUNTU) Installer chromium-browser chromium-chromedriver chromium-ublock-origin ;;
-    ARCHLINUX) Installer chromium ;;
+    CENTOS*)
+      Installer chromium
+      Installer chromedriver
+      Installer chromium-pepper-flash
+      Installer chrome-remote-desktop
+      ;;
+    DEBIAN*)
+      Installer chromium
+      Installer flashplayer-chromium
+      # Installer chromium-shell
+      # Installer chromium-driver
+      ;;
+    UBUNTU)
+      Installer chromium-browser
+      Installer chromium-chromedriver
+      Installer chromium-ublock-origin
+      ;;
+    ARCHLINUX)
+      Installer chromium
+      ;;
   esac
 }
 
@@ -1384,7 +1495,9 @@ Install_Batch_virtualbox()
   case $CFG_SYS in
     CENTOS*) 
       Installer -g "Development Tools"
-      Installer kernel-devel dkms wget
+      Installer kernel-devel
+      Installer dkms
+      Installer wget
 
       if test ! -e /etc/yum.repos.d/virtualbox.repo; then
         LogExec wget \"http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo\"
@@ -1396,7 +1509,8 @@ Install_Batch_virtualbox()
       Installer VirtualBox-5.2
       ;;
     DEBIAN*)
-      Installer build-essential manpages-dev
+      Installer build-essential
+      Installer manpages-dev
 
       grep virtualbox /etc/apt/sources.list > /dev/null
       if test "x$?" != "x0"; then
@@ -1432,11 +1546,14 @@ ORACLE
         LogExec apt-get update
         LogExec apt-get -y upgrade
       fi
-      Installer VirtualBox-5.2 dkms
+      Installer VirtualBox-5.2
+      Installer dkms
       ;;
     ARCHLINUX) 
       # Archlinux can use Community Repo
-      Installer virtualbox virtualbox-host-modules-arch virtualbox-guest-iso
+      Installer virtualbox
+      Installer virtualbox-host-modules-arch
+      Installer virtualbox-guest-iso
       # manual load the kernel modules
       #modprobe vboxdrv vboxnetadp vboxnetflt vboxpci
       ;;
@@ -1458,12 +1575,16 @@ Install_Batch_vbguest()
   case $CFG_SYS in
     CENTOS*) 
       Installer -g "Development Tools"
-      Installer kernel-devel dkms
+      Installer kernel-devel
+      Installer dkms
       ;;
     DEBIAN*|UBUNTU) 
       # Do not use Ubunto repo for guest addition
       # Installer virtualbox-guest-x11 virtualbox-guest-dkms
-      Installer build-essential manpages-dev dkms linux-headers-$(uname -r)
+      Installer build-essential
+      Installer manpages-dev
+      Installer dkms
+      Installer linux-headers-$(uname -r)
       ;;
     ARCHLINUX) 
       # Do not use Archlinux repo for guest addition
@@ -1472,7 +1593,8 @@ Install_Batch_vbguest()
       # for non-default kernels choose virtualbox-guest-dkms
       # To recompile the vbox kernel modules, run rcvboxdrv as root.
       #Installer virtualbox-guest-utils virtualbox-guest-dkms base-devel linux-headers
-      Installer base-devel linux-headers
+      Installer base-devel
+      Installer linux-headers
       ;;
   esac
 
@@ -1509,20 +1631,32 @@ Install_Batch_kvmhost()
   LogAs "\\nINSTALLING KVM/QEMU Hypervisor"
 
   # utilities for network tap devices
-  Installer bridge-utils iptables dnsmasq
+  Installer bridge-utils
+  Installer iptables
+  Installer dnsmasq
 
   case $CFG_SYS in
     CENTOS*) 
-      Installer qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-system-x86 virt-viewer
+      Installer qemu-kvm
+      Installer qemu-kvm-common
+      Installer qemu-kvm-tools
+      Installer qemu-system-x86
+      Installer virt-viewer
       Installer --enablerepo=nux-misc tunctl
       #FIXME: where is VDE2?
       ;;
     DEBIAN*|UBUNTU) 
-      Installer qemu-kvm kvmtool virt-viewer
-      Installer uml-utilities vde2
+      Installer qemu-kvm
+      Installer kvmtool
+      Installer virt-viewer
+      Installer uml-utilities
+      Installer vde2
       ;;
     ARCHLINUX) 
-      Installer qemu vde2 libvirt virt-viewer 
+      Installer qemu
+      Installer vde2
+      Installer libvirt
+      Installer virt-viewer 
       ;;
   esac
 
@@ -1541,11 +1675,34 @@ Install_Batch_kvmguest()
   Install_Batch_eth0
 }
 
+Install_Batch_libvirt()
+{
+  LogAs "\\nINSTALLING KVM/Libvirt Hypervisor"
+
+  local DEFUSER=$(Users)
+  case $CFG_SYS in
+    CENTOS*) 
+      ;;
+    DEBIAN*|UBUNTU) 
+      Installer qemu-system
+      Installer libvirt-clients 
+      Installer libvirt-daemon-system
+      Installer virt-manager
+      ;;
+    ARCHLINUX) 
+      ;;
+  esac
+  if test "x$DEFUSER" != "x"; then
+    LogExec usermod -a -G libvirt $DEFUSER
+  fi
+}
+
 Install_Batch_downloader()
 {
   LogAs "\\nINSTALLING filezilla and qbittorrent"
 
-  Installer filezilla qbittorrent
+  Installer filezilla
+  Installer qbittorrent
 }
 
 Install_Batch_remotetty()
@@ -1576,21 +1733,25 @@ Install_Batch_remotetty()
       VOLUMN="$VOLUMN tigervnc x11vnc remmina"
       ;;
   esac
-  if test "x$VOLUMN" != "x"; then
-    Installer $VOLUMN
-  fi
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 Install_Batch_pidgin()
 {
   LogAs "\\nINSTALLING pidgin and its plugins"
 
+  local VOLUMN="pidgin pidgin-sipe"
   case $CFG_SYS in
-    CENTOS*) Installer pidgin pidgin-sipe pidgin-otr libpurple pidgin-hangouts ;;
-    DEBIAN*) Installer pidgin pidgin-encryption pidgin-data pidgin-gnome-keyring pidgin-sipe ;;
-    UBUNTU) Installer pidgin pidgin-encryption pidgin-data pidgin-sipe pidgin-skype ;;
-    ARCHLINUX) Installer pidgin pidgin-sipe pidgin-otr libpurple ;;
+    CENTOS*) VOLUMN="$VOLUMN pidgin-otr libpurple pidgin-hangouts" ;;
+    DEBIAN*) VOLUMN="$VOLUMN pidgin-encryption pidgin-data pidgin-gnome-keyring" ;;
+    UBUNTU) VOLUMN="$VOLUMN pidgin-encryption pidgin-data pidgin-skype" ;;
+    ARCHLINUX) VOLUMN="$VOLUMN pidgin-otr libpurple" ;;
   esac
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 Install_Batch_picture()
@@ -1598,10 +1759,12 @@ Install_Batch_picture()
   LogAs "\\nINSTALLING picture tools"
 
   if test "x$CFG_GROUP_PIC" = "x"; then
-    Installer geeqie gthumb imagemagick
-  else
-    Installer $CFG_GROUP_PIC
+    CFG_GROUP_PIC="geeqie gthumb imagemagick"
   fi
+  for i in $CFG_GROUP_PIC; do
+    Installer $i
+  done
+
 }
 
 Install_Batch_cad()
@@ -1609,10 +1772,11 @@ Install_Batch_cad()
   LogAs "\\nINSTALLING CAD tools"
 
   if test "x$CFG_GROUP_CAD" = "x"; then
-    Installer librecad
-  else
-    Installer $CFG_GROUP_CAD
+    CFG_GROUP_CAD="librecad"
   fi
+  for i in $CFG_GROUP_CAD; do
+    Installer $i
+  done
 }
   
 Install_Batch_vlc()
@@ -1620,9 +1784,19 @@ Install_Batch_vlc()
   LogAs "\\nINSTALLING VLC player"
 
   case $CFG_SYS in
-    CENTOS*) Installer vlc vlc-extras vlc-plugin-jack ;;
-    DEBIAN*|UBUNTU) Installer vlc vlc-plugin-samba vlc-plugin-jack ;;
-    ARCHLINUX) Installer vlc ;;
+    CENTOS*)
+      Installer vlc
+      Installer vlc-extras
+      Installer vlc-plugin-jack
+      ;;
+    DEBIAN*|UBUNTU)
+      Installer vlc
+      Installer vlc-plugin-samba
+      Installer vlc-plugin-jack
+      ;;
+    ARCHLINUX)
+      Installer vlc
+      ;;
   esac
 
   # this font is for chinese subtitles in VLC
@@ -1655,9 +1829,9 @@ Install_Batch_gstreamer()
     ARCHLINUX) VOLUMN="$VOLUMN gstreamer gst-libav gst-plugins-bad gst-plugins-base \
       gst-plugins-good gst-plugins-ugly" ;;
   esac
-  if test "x$VOLUMN" != "x"; then
-    Installer $VOLUMN
-  fi
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 Install_Batch_office()
@@ -1696,9 +1870,9 @@ Install_Batch_eafont()
       fi
       ;;
   esac
-  if test "x$VOLUMN" != "x"; then
-    Installer $VOLUMN
-  fi
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 # This is a support function for installing IME
@@ -1721,11 +1895,16 @@ LEAFPAD
 Install_Batch_ibus()
 {
   LogAs "\\nINSTALLING Chinese and Japanese IBUS package"
+
+  local VOLUMN="ibus ibus-libpinyin ibus-anthy"
   case $CFG_SYS in
-    CENTOS*) Installer ibus ibus-qt ibus-libpinyin ibus-anthy ;;
-    DEBIAN*|UBUNTU) Installer ibus ibus-qt4 ibus-libpinyin ibus-anthy ;;
-    ARCHLINUX) Installer ibus ibus-qt ibus-libpinyin ibus-googlepinyin ibus-anthy ;;
+    CENTOS*) VOLUMN="$VOLUMN ibus-qt" ;;
+    DEBIAN*|UBUNTU) VOLUMN="$VOLUMN ibus-qt4" ;;
+    ARCHLINUX) VOLUMN="$VOLUMN ibus-qt ibus-googlepinyin" ;;
   esac 
+  for i in $VOLUMN; do
+    Installer $i
+  done
 
   # auto start the daemon
   cat >> /etc/X11/xinit/xinitrc << ASIBUS
@@ -1758,11 +1937,16 @@ CFGIBUS
 Install_Batch_fcitx()
 {
   LogAs "\\nINSTALLING Chinese and Japanese Fcitx package"
+
+  local VOLUMN="fcitx"
   case $CFG_SYS in
-    CENTOS*) Installer fcitx fcitx-anthy fcitx-cloudpinyin fcitx-configtool ;;
-    DEBIAN*|UBUNTU) Installer fcitx fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc ;;
-    ARCHLINUX) Installer fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc ;;
+    CENTOS*) VOLUMN="$VOLUMN fcitx-anthy fcitx-cloudpinyin fcitx-configtool" ;;
+    DEBIAN*|UBUNTU) VOLUMN="$VOLUMN fcitx-libpinyin fcitx-googlepinyin fcitx-config-common fcitx-mozc" ;;
+    ARCHLINUX) VOLUMN="$VOLUMN fcitx-im fcitx-libpinyin fcitx-googlepinyin fcitx-configtool fcitx-mozc" ;;
   esac 
+  for i in $VOLUMN; do
+    Installer $i
+  done
 
   # install extra chinese fonts and japanese fonts
   Install_Batch_eafont
@@ -1773,11 +1957,15 @@ Install_Batch_bluetooth()
 {
   LogAs "\\nINSTALLING Bluetooth Manager"
 
+  local VOLUMN="bluez bluez-tools" 
   case $CFG_SYS in
-    CENTOS*) Installer bluez pulseaudio-module-bluetooth bluez-tools ;;
-    DEBIAN*|UBUNTU) Installer blueman bluez pulseaudio-module-bluetooth bluez-tools bluez-firmware ;;
-    ARCHLINUX) Installer blueman bluez pulseaudio-bluetooth bluez-tools bluez-firmware bluez-plugins;;
+    CENTOS*) VOLUMN="$VOLUMN pulseaudio-module-bluetooth" ;;
+    DEBIAN*|UBUNTU) VOLUMN="$VOLUMN blueman pulseaudio-module-bluetooth bluez-firmware" ;;
+    ARCHLINUX) VOLUMN="$VOLUMN blueman pulseaudio-bluetooth bluez-firmware bluez-plugins" ;;
   esac
+  for i in $VOLUMN; do
+    Installer $i
+  done
 }
 
 Install_Batch_dropbox()
