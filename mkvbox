@@ -308,6 +308,17 @@ Repo_Update_Debian()
     DEBIAN10)
       LogExec apt-get update -oAcquire::AllowInsecureRepositories=true
       LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
+      if ! test "x$?" = "x0"; then
+        # the backup plan for deb-multimedia keyring
+        if test -e "./bin/$keyring"; then
+          LogExec dpkg -i ./bin/$keyring
+        else
+          LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
+          if test -e "$keyring"; then
+            LogExec dpkg -i $keyring
+          fi
+        fi
+      fi
       ;;
   esac
 
@@ -463,6 +474,13 @@ Install_Batch_libffmpeg()
     CENTOS*)
       Installer ffms2-devel
       Installer gd-devel
+      ;;
+    DEBIAN10)
+      Installer libavformat-dev
+      Installer libswscale-dev
+      Installer libgd-dev
+      Installer libx11-dev
+      Installer zlib1g-dev
       ;;
     DEBIAN*|UBUNTU)
       Installer libavformat-dev
@@ -657,7 +675,7 @@ SMBCFG
   if test "x$?" != "x0"; then
     LogExec groupadd -r sambashare
     if test "x$DEFUSER" != "x"; then
-      LogExec usermod -a -G sambashare $DEFUSER
+      LogExec /sbin/usermod -a -G sambashare $DEFUSER
     fi
   fi
 
@@ -1409,7 +1427,7 @@ Install_Batch_chromium()
       ;;
     DEBIAN*)
       Installer chromium
-      Installer flashplayer-chromium
+      # Installer flashplayer-chromium
       # Installer chromium-shell
       # Installer chromium-driver
       ;;
@@ -1899,7 +1917,7 @@ Install_Batch_ibus()
   local VOLUMN="ibus ibus-libpinyin ibus-anthy"
   case $CFG_SYS in
     CENTOS*) VOLUMN="$VOLUMN ibus-qt" ;;
-    DEBIAN*|UBUNTU) VOLUMN="$VOLUMN ibus-qt4" ;;
+    DEBIAN8|DEBIAN9|UBUNTU) VOLUMN="$VOLUMN ibus-qt4" ;;
     ARCHLINUX) VOLUMN="$VOLUMN ibus-qt ibus-googlepinyin" ;;
   esac 
   for i in $VOLUMN; do
