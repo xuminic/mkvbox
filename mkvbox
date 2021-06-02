@@ -2,6 +2,8 @@
 
 #############################################################################
 # Configure
+# Note: for virtualbox guest additions, mount or insert the 
+#    /usr/share/virtualbox/VBoxGuestAdditions.iso 
 #############################################################################
 CFG_DESKTOP=mate	# mate/xfce/lxde/cinnamon/gnome/kde
 CFG_IME=ibus            # ibus/fcitx
@@ -283,44 +285,31 @@ Repo_Update_Debian()
     LogExec rm -f /tmp/sources.list
   fi
 
-  case $CFG_SYS in
-    DEBIAN8|DEBIAN9)
-      grep "deb-multimedia.org" /etc/apt/sources.list > /dev/null
-      if test "x$?" != "x0"; then
-        echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
-        echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
-        #echo "deb http://mirror.optus.net/deb-multimedia/ stable main non-free" >> $CHROOT/etc/apt/sources.list
-        LogExec apt-get update
-        LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
-        if ! test "x$?" = "x0"; then
-          # the backup plan for deb-multimedia keyring
-          if test -e "./bin/$keyring"; then
-            LogExec dpkg -i ./bin/$keyring
-          else
-            LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
-            if test -e "$keyring"; then
-              LogExec dpkg -i $keyring
-            fi
-          fi
-        fi
-      fi ;;
-
-    DEBIAN10)
-      LogExec apt-get update -oAcquire::AllowInsecureRepositories=true
-      LogExec apt-get -y --allow-unauthenticated install deb-multimedia-keyring
-      if ! test "x$?" = "x0"; then
-        # the backup plan for deb-multimedia keyring
-        if test -e "./bin/$keyring"; then
-          LogExec dpkg -i ./bin/$keyring
-        else
-          LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
-          if test -e "$keyring"; then
-            LogExec dpkg -i $keyring
-          fi
-        fi
+  # Install Multimedia softwares
+  grep "deb-multimedia.org" /etc/apt/sources.list > /dev/null
+  if test "x$?" != "x0"; then
+    echo -e "\\n# Deb Multimedia for mostly multimedia packages" >> $CHROOT/etc/apt/sources.list
+    if test "$CFG_SYS" = "DEBIAN7"; then
+      echo "deb http://www.deb-multimedia.org wheezy main non-free" >> $CHROOT/etc/apt/sources.list
+    elif test "$CFG_SYS" = "DEBIAN8"; then
+      echo "deb http://www.deb-multimedia.org jessie main non-free" >> $CHROOT/etc/apt/sources.list
+    elif test "$CFG_SYS" = "DEBIAN9"; then
+      echo "deb http://www.deb-multimedia.org stretch main non-free" >> $CHROOT/etc/apt/sources.list
+      echo "deb http://www.deb-multimedia.org stretch-backports main" >> $CHROOT/etc/apt/sources.list
+    elif test "$CFG_SYS" = "DEBIAN10"; then
+      echo "deb http://www.deb-multimedia.org buster main non-free" >> $CHROOT/etc/apt/sources.list
+      echo "deb http://www.deb-multimedia.org buster-backports main" >> $CHROOT/etc/apt/sources.list
+    fi
+    # the backup plan for deb-multimedia keyring
+    if test -e "./bin/$keyring"; then
+      LogExec dpkg -i ./bin/$keyring
+    else
+      LogExec wget http://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/$keyring
+      if test -e "$keyring"; then
+        LogExec dpkg -i $keyring
       fi
-      ;;
-  esac
+    fi
+  fi
 
   #update and upgrade to the newest releases
   LogExec apt-get update 
@@ -475,19 +464,17 @@ Install_Batch_libffmpeg()
       Installer ffms2-devel
       Installer gd-devel
       ;;
-    DEBIAN10)
-      Installer libavformat-dev
-      Installer libswscale-dev
-      Installer libgd-dev
-      Installer libx11-dev
-      Installer zlib1g-dev
-      ;;
     DEBIAN*|UBUNTU)
       Installer libavformat-dev
       Installer libswscale-dev
       Installer libgd2-dev
       Installer libx11-dev
       Installer zlib1g-dev
+      if test "$CFG_SYS" = "DEBIAN10"; then
+        Installer libgd-dev
+      else
+        Installer libgd2-dev
+      fi
       ;;
     ARCHLINUX)
       Installer ffmpeg
@@ -1278,9 +1265,6 @@ Install_Batch_firefox()
       ;;
     DEBIAN*)
       Installer firefox-esr
-      Installer firefox-esr-ublock-origin
-      Installer firefox-esr-noscript
-      Installer firefox-esr-flashblock
       ;;
     UBUNTU)
       Installer firefox
@@ -1447,43 +1431,23 @@ Install_Batch_chrome()
   LogAs "\\nINSTALLING Google Chrome"
   case $CFG_SYS in
     CENTOS*)
-      if test ! -e /etc/yum.repos.d/google.repo; then
-        #install google repos
-        cat >  $CHROOT/etc/yum.repos.d/google.repo << GGLYUM
-[google]
-name=Google - \$basearch
-baseurl=http://dl.google.com/linux/rpm/stable/\$basearch
-enabled=1
-gpgcheck=1
-gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
-
-[google-chrome]
-name=google-chrome
-baseurl=http://dl.google.com/linux/chrome/rpm/stable/\$basearch
-enabled=1
-gpgcheck=1
-gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
-
-GGLYUM
-        LogExec yum -y update
+      if test ! -e ./google-chrome-stable_current_x86_64.rpm; then
+        LogExec wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+	if test -e ./google-chrome-stable_current_x86_64.rpm; then
+          if test "$CFG_SYS" = "CENTOS8"; then
+            LogExec dnf localinstall ./google-chrome-stable_current_x86_64.rpm
+	  else
+            LogExec yum localinstall ./google-chrome-stable_current_x86_64.rpm
+          fi
+	fi
       fi
       ;;
     DEBIAN*|UBUNTU)
-      grep "dl.google.com" /etc/apt/sources.list > /dev/null
-      if test "x$?" != "x0"; then
-        echo -e "\\n# Google packages i.e Google Chrome" >> $CHROOT/etc/apt/sources.list
-	echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> $CHROOT/etc/apt/sources.list
-
-        if test -e ./bin/linux_signing_key.pub; then
-          LogExec apt-key add ./bin/linux_signing_key.pub
-        else
-          LogExec wget https://dl.google.com/linux/linux_signing_key.pub
-          if test -e linux_signing_key.pub; then
-            LogExec apt-key add linux_signing_key.pub
-          fi
-        fi
-	LogExec apt-get update
-	LogExec apt-get -y upgrade
+      if test ! -e ./google-chrome-stable_current_amd64.deb; then
+        LogExec wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+	if test -e ./google-chrome-stable_current_amd64.deb; then
+          LogExec apt install ./google-chrome-stable_current_amd64.deb
+	fi
       fi
       ;;
     ARCHLINUX) 
@@ -1498,11 +1462,8 @@ GGLYUM
           LogExec pacman -U $fname
 	fi
       fi
-      return
       ;;
   esac
-
-  Installer google-chrome-stable 
 }
 
 Install_Batch_virtualbox()
@@ -1736,7 +1697,11 @@ Install_Batch_remotetty()
       fi
       ;;
     DEBIAN*) 
-      VOLUMN="$VOLUMN vnc-viewer" 
+      if test "$CFG_SYS" = "DEBIAN10"; then
+        VOLUMN="$VOLUMN tigervnc-viewer"
+      else
+        VOLUMN="$VOLUMN vnc-viewer" 
+      fi
       if test -e /usr/bin/srecord; then
         VOLUMN="$VOLUMN cutecom"
       fi
