@@ -470,7 +470,7 @@ Install_Batch_libffmpeg()
       Installer libgd2-dev
       Installer libx11-dev
       Installer zlib1g-dev
-      if test "$CFG_SYS" = "DEBIAN10"; then
+      if test "$CFG_SYS" = "DEBIAN10" || test "$CFG_SYS" = "DEBIAN11"; then
         Installer libgd-dev
       else
         Installer libgd2-dev
@@ -1696,12 +1696,14 @@ Install_Batch_remotetty()
         VOLUMN="$VOLUMN cutecom"
       fi
       ;;
-    DEBIAN*) 
-      if test "$CFG_SYS" = "DEBIAN10"; then
-        VOLUMN="$VOLUMN tigervnc-viewer"
-      else
-        VOLUMN="$VOLUMN vnc-viewer" 
+    DEBIAN10|DEBIAN11) 
+      VOLUMN="$VOLUMN tigervnc-viewer"
+      if test -e /usr/bin/srecord; then
+        VOLUMN="$VOLUMN cutecom"
       fi
+      ;;
+    DEBIAN*)
+      VOLUMN="$VOLUMN vnc-viewer" 
       if test -e /usr/bin/srecord; then
         VOLUMN="$VOLUMN cutecom"
       fi
@@ -2080,6 +2082,27 @@ Section "Monitor"
 EndSection
 
 XMON
+      ;;
+
+    xinit2)
+      local DEVNAME="/etc/X11/Xsession.d/45vbox-xrandr"
+      LogAs "Adding modeline to $DEVNAME"
+      if test -e "$DEVNAME"; then
+        LogAs "Found $DEVNAME! Please add modelines manually!"
+        DEVNAME=/dev/stdout
+      fi
+
+      cat > $DEVNAME << XMONTOO
+VBOXMODE="1920 900"
+MODLINE=$(cvt $VBOXMODE | grep Modeline | cut -d' ' -f2-)
+MODNAME=$(echo $MODLINE | cut -d'"' -f2)
+
+PRI_OUTPUT=`xrandr | grep -w connected | cut -f1 -d' '`
+
+xrandr --newmode $MODNAME $MODLINE
+xrandr --addmode $PRI_OUTPUT $MODNAME
+xrandr --output $PRI_OUTPUT --mode $MODNAME
+XMONTOO
       ;;
 
     auto) xrandr --output "$OUTPUT" --auto ;;
